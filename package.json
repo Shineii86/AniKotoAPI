@@ -8,7 +8,7 @@
     "dev": "nodemon server.js",
     "test": "node test.js"
   },
-  "author": "Sʜɪɴᴇɪ Nᴏᴜᴢᴇɴ",
+  "author": "S\u029c\u026a\u0274\u1d07\u026a N\u1d0f\u1d1c\u1d22\u1d07\u0274",
   "license": "MIT",
   "dependencies": {
     "axios": "^1.8.0",
@@ -24,5 +24,8 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/Shineii86/AniKotoAPI.git"
+  },
+  "overrides": {
+    "undici": "7.29.0"
   }
 }
