@@ -1,8 +1,8 @@
 /**
  * ============================================================================
  *  AniKotoAPI — Architecture Document
- *  Version : 2.2.1
- *  Generated: 2026-07-30
+ *  Version : 2.3.0
+ *  Generated: 2026-08-14
  * ============================================================================
  *
  *  Free REST API for scraping anime data from anikototv.to
@@ -832,7 +832,7 @@
  *  │  VERSION HISTORY                                                     │
  *  ├──────────────────────────────────────────────────────────────────────┤
  *  │                                                                      │
- *  │  v2.2.1  (Current)                                                  │
+ *  │  v2.3.0  (Current)                                                  │
  *  │    • 28 endpoints, 28 extractors                                    │
  *  │    • LRU cache with per-endpoint TTL                                │
  *  │    • 5-mirror failover system                                       │

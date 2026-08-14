@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.0] - 2026-08-14
+
+### Added
+- **Streaming Status Warning**: Added ⚠️ Streaming Status section to README documenting which endpoints work vs which are blocked by upstream anti-bot protection
+- **Streaming Fix Solutions**: Added SCRAPER_API_KEY and FLARESOLVERR_URL environment variable solutions to README for bypassing Cloudflare bot protection
+- **Upstream Error Detection**: Added detection of upstream API error responses (`status >= 400`) in `streamInfo.extractor.js` — returns HTTP 502 with descriptive error instead of silently returning null URL
+- **Cookie-Aware Session Establishment**: Added session cookie fetching in `extractStreamInfo` and `extractServerList` — fetches watch/home page to capture `set-cookie` headers before AJAX requests
+- **Optional Slug Parameter**: `getStreamInfo` controller now accepts optional `?slug=` query parameter for session establishment
+
+### Changed
+- **Version**: Bumped to 2.3.0
+- **README**: Updated version badge from 2.2.1 to 2.3.0
+- **README**: Added streaming status warning with solutions table
+- **Docs**: Updated index.md, endpoints.md, streaming.md with streaming status warnings and v2.3.0 references
+
+### Fixed
+- **CRITICAL**: Fixed `/api/stream` returning `null` URL — upstream AJAX endpoints (`/ajax/server?get=`, `/ajax/server/list?servers=`) require session cookies; now properly detects upstream 500 errors and returns HTTP 502 with error message
+
 ## [2.2.2] - 2026-08-14
 
 ### Fixed

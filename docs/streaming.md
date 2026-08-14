@@ -12,6 +12,31 @@ This document covers the complete streaming workflow for AniKotoAPI — from sea
 
 ---
 
+## ⚠️ Streaming Status
+
+> **Streaming endpoints (`/api/servers`, `/api/stream`, `/api/stream/resolve`) return errors when anikototv.to blocks AJAX requests from server-side IPs.**
+
+| What Works | What's Blocked |
+|:---|:---|
+| Home, spotlight, trending | `/api/servers` — server list |
+| Search, suggestions, filter | `/api/stream` — embed URLs |
+| Info, episodes, schedule | `/api/stream/resolve` — m3u8/mp4 |
+| Top 10, most popular, new release | `/api/mapper-servers` — gogoanime servers |
+| AZ list, random, genre list | All AJAX-dependent endpoints |
+| All HTML-scraped endpoints | |
+
+**To fix streaming**, set one of these environment variables:
+
+```bash
+# Option 1: ScraperAPI (requires premium plan — $49/month)
+SCRAPER_API_KEY=your_scraperapi_key
+
+# Option 2: FlareSolverr (self-hosted, unlimited)
+FLARESOLVERR_URL=http://your-flaresolverr-host:8191
+```
+
+---
+
 ## Table of Contents
 
 1. [Architecture Overview](#architecture-overview)
