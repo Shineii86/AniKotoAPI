@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.3.0] - 2026-08-14
+## [2.4.0] - 2026-08-14
 
 ### Added
 - **Streaming Status Warning**: Added ⚠️ Streaming Status section to README documenting which endpoints work vs which are blocked by upstream anti-bot protection
@@ -20,10 +20,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Optional Slug Parameter**: `getStreamInfo` controller now accepts optional `?slug=` query parameter for session establishment
 
 ### Changed
-- **Version**: Bumped to 2.3.0
-- **README**: Updated version badge from 2.2.1 to 2.3.0
+- **Version**: Bumped to 2.4.0
+- **README**: Updated version badge from 2.2.1 to 2.4.0
 - **README**: Added streaming status warning with solutions table
-- **Docs**: Updated index.md, endpoints.md, streaming.md with streaming status warnings and v2.3.0 references
+- **Docs**: Updated index.md, endpoints.md, streaming.md with streaming status warnings and v2.4.0 references
 - **Mirror Helper**: `fetchWithMirror` now includes proxy fallback and Cloudflare detection
 
 ### Fixed
