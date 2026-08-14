@@ -19,6 +19,7 @@
 import axios from "axios";
 import { headers } from "../configs/header.config.js";
 import { getCache, setCache } from "./cache.helper.js";
+import { fetchWithProxy, getProxyStatus } from "./proxy.helper.js";
 
 // ══════════════════════════════════════════════════════════════
 // MIRROR CONFIGURATION
@@ -144,17 +145,18 @@ function buildUrl(path, baseUrl = workingMirror) {
 
 // ---- FEATURE: Resilient Fetch with Mirror Fallback ----
 /**
- * Fetch with automatic mirror fallback
+ * Fetch with automatic mirror fallback and proxy support
  * @param {string} path - URL path to fetch
  * @param {object} options - Additional options
- * @returns {Promise<{data: string, mirror: string}>}
+ * @returns {Promise<{data: string, mirror: string, proxy: string}>}
  */
 async function fetchWithMirror(path, options = {}) {
   const { 
     timeout = 15000, 
     retries = 2,
     returnType = "text",
-    headers: customHeaders = {}
+    headers: customHeaders = {},
+    useProxy = true,
   } = options;
 
   // Merge default headers with custom headers
@@ -182,6 +184,7 @@ async function fetchWithMirror(path, options = {}) {
     mirrorsToTry.push(...ALL_MIRRORS.map(m => m.url));
   }
 
+  // Try direct requests first
   for (const mirror of mirrorsToTry) {
     const url = buildUrl(path, mirror);
     
@@ -194,6 +197,25 @@ async function fetchWithMirror(path, options = {}) {
         });
 
         if (response.status === 200) {
+          // Check for Cloudflare challenge
+          const data = response.data;
+          if (typeof data === "string" && (
+            data.includes("Just a moment...") ||
+            data.includes("Checking your browser") ||
+            data.includes("Enable JavaScript")
+          )) {
+            throw new Error("Cloudflare challenge detected");
+          }
+
+          // Check for upstream error
+          let parsed = data;
+          if (typeof data === "string") {
+            try { parsed = JSON.parse(data); } catch { /* not JSON */ }
+          }
+          if (parsed && typeof parsed === "object" && parsed.status && Number(parsed.status) >= 400) {
+            throw new Error(`Upstream error (${parsed.status}): ${parsed.result || "Bad request"}`);
+          }
+
           // Update working mirror
           if (mirror !== workingMirror) {
             workingMirror = mirror;
@@ -202,7 +224,8 @@ async function fetchWithMirror(path, options = {}) {
           }
           return { 
             data: response.data,
-            mirror 
+            mirror,
+            proxy: "direct"
           };
         }
 
@@ -227,6 +250,27 @@ async function fetchWithMirror(path, options = {}) {
     if (!lastError.message?.includes("Endpoint not found")) {
       failedMirrors.add(mirror);
       console.log(`[MIRROR] Marked as failed: ${mirror}`);
+    }
+  }
+
+  // All direct requests failed — try proxy if configured
+  if (useProxy) {
+    const proxyStatus = getProxyStatus();
+    if (proxyStatus.anyEnabled) {
+      console.log(`[MIRROR] All mirrors failed, trying proxy...`);
+      try {
+        const proxyResult = await fetchWithProxy(
+          buildUrl(path, mirrorsToTry[0]),
+          { requestHeaders, timeout: timeout * 2, returnType }
+        );
+        return {
+          data: proxyResult.data,
+          mirror: mirrorsToTry[0],
+          proxy: proxyResult.proxy,
+        };
+      } catch (proxyError) {
+        console.log(`[MIRROR] Proxy also failed: ${proxyError.message}`);
+      }
     }
   }
 
@@ -265,6 +309,7 @@ export {
   resetMirrorCache, 
   buildUrl,
   getMirrorStatus,
+  getProxyStatus,
   ALL_MIRRORS
 };
 // ══════════════════════════════════════════════════════════════ END: mirror.helper.js

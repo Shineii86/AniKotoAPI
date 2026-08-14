@@ -48,7 +48,7 @@ import { getTopAnimeRankings } from "../controllers/topAnimeRankings.controller.
 import { getRecentlyUpdatedTabs } from "../controllers/recentlyUpdatedTabs.controller.js";
 import { getCompletedAnime } from "../controllers/completedAnime.controller.js";
 import { categoryRoutes } from "./category.route.js";
-import { getMirrorStatus, resetMirrorCache } from "../helper/mirror.helper.js";
+import { getMirrorStatus, resetMirrorCache, getProxyStatus } from "../helper/mirror.helper.js";
 import { getCacheStats } from "../helper/cache.helper.js";
 
 // ══════════════════════════════════════════════════════════════
@@ -604,6 +604,12 @@ app.post("/api/mirrors/reset", (req, res) => {
   res.json({ success: true, message: "Mirror cache reset" });
 });
 
+// ---- FEATURE: Proxy status (ScraperAPI / FlareSolverr) ----
+app.get("/api/proxy/status", (req, res) => {
+  const status = getProxyStatus();
+  res.json({ success: true, results: status });
+});
+
 // ---- FEATURE: OpenAPI specification ----
 app.get("/api/openapi", (req, res) => {
   res.json({
@@ -664,6 +670,7 @@ app.get("/api/openapi", (req, res) => {
       "/top-rankings": { get: { summary: "Top anime rankings (day/week/month)", tags: ["Rankings"] } },
       "/recently-updated": { get: { summary: "Recently updated (all/dub/sub tabs)", tags: ["Releases"] } },
       "/completed": { get: { summary: "Completed anime series", tags: ["Rankings"] } },
+      "/proxy/status": { get: { summary: "Proxy status (ScraperAPI / FlareSolverr)", tags: ["System"] } },
     },
     tags: [
       { name: "Home", description: "Homepage data" },

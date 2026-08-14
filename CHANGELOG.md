@@ -9,7 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **Streaming Status Warning**: Added ⚠️ Streaming Status section to README documenting which endpoints work vs which are blocked by upstream anti-bot protection
-- **Streaming Fix Solutions**: Added SCRAPER_API_KEY and FLARESOLVERR_URL environment variable solutions to README for bypassing Cloudflare bot protection
+- **Proxy Helper**: New `src/helper/proxy.helper.js` — unified proxy support for ScraperAPI and FlareSolverr
+- **ScraperAPI Integration**: Routes requests through ScraperAPI premium residential IPs when direct requests fail
+- **FlareSolverr Integration**: Routes requests through self-hosted FlareSolverr browser when direct requests fail
+- **Proxy Status Endpoint**: `GET /api/proxy/status` — shows configured proxy providers and their status
+- **Auto Proxy Fallback**: `fetchWithMirror` now automatically falls back to configured proxies when all mirrors fail
+- **Cloudflare Detection**: Detects Cloudflare challenge pages and triggers proxy fallback
 - **Upstream Error Detection**: Added detection of upstream API error responses (`status >= 400`) in `streamInfo.extractor.js` — returns HTTP 502 with descriptive error instead of silently returning null URL
 - **Cookie-Aware Session Establishment**: Added session cookie fetching in `extractStreamInfo` and `extractServerList` — fetches watch/home page to capture `set-cookie` headers before AJAX requests
 - **Optional Slug Parameter**: `getStreamInfo` controller now accepts optional `?slug=` query parameter for session establishment
@@ -19,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **README**: Updated version badge from 2.2.1 to 2.3.0
 - **README**: Added streaming status warning with solutions table
 - **Docs**: Updated index.md, endpoints.md, streaming.md with streaming status warnings and v2.3.0 references
+- **Mirror Helper**: `fetchWithMirror` now includes proxy fallback and Cloudflare detection
 
 ### Fixed
 - **CRITICAL**: Fixed `/api/stream` returning `null` URL — upstream AJAX endpoints (`/ajax/server?get=`, `/ajax/server/list?servers=`) require session cookies; now properly detects upstream 500 errors and returns HTTP 502 with error message
