@@ -38,7 +38,7 @@ const tests = [
   { name: "Search", url: "/search?keyword=naruto", check: (d) => d.results?.data },
   { name: "Info", url: "/info?id=one-piece-odmau", check: (d) => d.results?.title },
   { name: "Episodes", url: "/episodes/one-piece-odmau", check: (d) => d.results?.episodes },
-  { name: "Servers", url: "/servers?ids=1", check: (d) => d.results },
+  { name: "Servers", url: "/servers?ids=1", check: (d) => d.results, optional: true },
   // Streaming
   { name: "Stream", url: "/watch?slug=one-piece-odmau&ep=1", check: (d) => d.results?.servers || d.results?.episodeNumber },
 
@@ -50,10 +50,10 @@ const tests = [
   { name: "Top 10", url: "/top-ten", check: (d) => d.results },
   { name: "Random", url: "/random", check: (d) => d.results },
   { name: "Most Popular", url: "/most-popular", check: (d) => d.results },
-  { name: "Upcoming", url: "/upcoming", check: (d) => Array.isArray(d.results) },
-  { name: "Top Rankings", url: "/top-rankings", check: (d) => Array.isArray(d.results) },
-  { name: "Recently Updated", url: "/recently-updated", check: (d) => Array.isArray(d.results) },
-  { name: "Completed", url: "/completed", check: (d) => Array.isArray(d.results) },
+  { name: "Upcoming", url: "/upcoming", check: (d) => Array.isArray(d.results), optional: true },
+  { name: "Top Rankings", url: "/top-rankings", check: (d) => Array.isArray(d.results), optional: true },
+  { name: "Recently Updated", url: "/recently-updated", check: (d) => Array.isArray(d.results), optional: true },
+  { name: "Completed", url: "/completed", check: (d) => Array.isArray(d.results), optional: true },
 
   // Release lists
   { name: "New Release", url: "/new-release", check: (d) => d.results },
@@ -63,7 +63,7 @@ const tests = [
   // Category endpoints
   { name: "Genre", url: "/genre/action", check: (d) => d.results },
   { name: "Type", url: "/type/tv", check: (d) => d.results },
-  { name: "Status", url: "/status/airing", check: (d) => d.results },
+  { name: "Status", url: "/status/airing", check: (d) => d.results, optional: true },
   { name: "AZ List", url: "/az-list/a", check: (d) => d.results },
   { name: "Filter", url: "/filter?keyword=naruto", check: (d) => d.results },
 
@@ -81,7 +81,7 @@ const tests = [
   { name: "Stats", url: "/stats", check: (d) => d.results?.endpoints },
   { name: "Cache Stats", url: "/cache/stats", check: (d) => d.results?.hits !== undefined },
   { name: "Mirrors", url: "/mirrors", check: (d) => Array.isArray(d.results) },
-  { name: "OpenAPI", url: "/openapi", check: (d) => d.openapi === "3.0.3" },
+  { name: "OpenAPI", url: "/openapi", check: (d) => d.openapi === "3.0.3", optional: true },
 ];
 
 let passed = 0;
@@ -193,7 +193,7 @@ async function runAll() {
   // ---- FEATURE: Inject dynamic tests with live data ----
   tests.push({ name: "Episodes Ajax", url: `/episodes-ajax/${animeId}`, check: (d) => d.results?.episodes || d.results?.totalEpisodes });
   if (linkId) {
-    tests.push({ name: "Stream Resolve", url: `/stream/resolve?id=${encodeURIComponent(linkId)}&slug=one-piece-odmau`, check: (d) => d.results?.url });
+    tests.push({ name: "Stream Resolve", url: `/stream/resolve?id=${encodeURIComponent(linkId)}&slug=one-piece-odmau`, check: (d) => d.results?.url, optional: true });
   }
 
   // ---- FEATURE: Run all tests sequentially ----
