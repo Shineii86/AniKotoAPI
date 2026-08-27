@@ -50,6 +50,7 @@ import { getCompletedAnime } from "../controllers/completedAnime.controller.js";
 import { categoryRoutes } from "./category.route.js";
 import { getMirrorStatus, resetMirrorCache, getProxyStatus } from "../helper/mirror.helper.js";
 import { getCacheStats } from "../helper/cache.helper.js";
+import { assertProxyableUrl, streamRefererHeaders } from "../helper/streamProxy.helper.js";
 
 // ══════════════════════════════════════════════════════════════
 // ROUTE REGISTRATION
@@ -235,13 +236,13 @@ app.use((req, res, next) => {
       if (!url) {
         return res.status(400).json({ success: false, message: "M3U8 URL is required" });
       }
-      // NOTE: Validate URL is from known streaming domains
-      const allowedDomains = ["vidtube.site", "vidplay.site", "megaplay.buzz", "megaplay-1.buzz", "cdn.anipixcdn.co"];
-      const urlObj = new URL(url);
-      const isAllowed = allowedDomains.some(d => urlObj.hostname === d || urlObj.hostname.endsWith(`.${d}`)) || urlObj.pathname.endsWith(".m3u8");
-
-      if (!isAllowed) {
-        return res.status(403).json({ success: false, message: "Domain not allowed for proxy" });
+      // NOTE: Validate URL is from known streaming domains.
+      // WARNING: Do not add an "or the path looks like a playlist" escape hatch —
+      // the previous version had one, which let any host through and turned this
+      // endpoint into an open proxy onto the server's own network.
+      const check = assertProxyableUrl(url);
+      if (!check.ok) {
+        return res.status(check.status).json({ success: false, message: check.message });
       }
 
       const axios = (await import("axios")).default;
@@ -250,8 +251,7 @@ app.use((req, res, next) => {
       const response = await axios.get(url, {
         headers: {
           ...defaultHeaders,
-          "Referer": "https://anikototv.to/",
-          "Origin": "https://anikototv.to",
+          ...streamRefererHeaders(),
         },
         timeout: 15000,
         responseType: "text",
@@ -288,14 +288,20 @@ app.use((req, res, next) => {
         return res.status(400).json({ success: false, message: "TS URL is required" });
       }
 
+      // NOTE: Segment URLs come from the caller too, so they need the same guard
+      // the playlist proxy uses — this endpoint previously had none.
+      const check = assertProxyableUrl(url);
+      if (!check.ok) {
+        return res.status(check.status).json({ success: false, message: check.message });
+      }
+
       const axios = (await import("axios")).default;
       const { headers: defaultHeaders } = await import("../configs/header.config.js");
 
       const response = await axios.get(url, {
         headers: {
           ...defaultHeaders,
-          "Referer": "https://anikototv.to/",
-          "Origin": "https://anikototv.to",
+          ...streamRefererHeaders(),
         },
         timeout: 30000,
         responseType: "arraybuffer",
