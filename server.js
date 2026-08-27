@@ -16,7 +16,13 @@
  * ======= • ======= • ======= • ======= • =======• =======
  */
 
-import dotenv from "dotenv";
+// WARNING: This import must stay first. Static imports are evaluated before the
+// module body runs, so a dotenv.config() call down there fires only after every
+// helper has already been evaluated — and helpers that read process.env at their
+// top level (mirror, cache, proxy, streamProxy) would silently keep their
+// defaults. Importing dotenv/config runs config() as an import side effect, so
+// .env is populated before any of those modules load.
+import "dotenv/config";
 import express from "express";
 import compression from "compression";
 import path from "path";
@@ -26,8 +32,6 @@ import { fileURLToPath } from "url";
 import { dirname } from "path";
 import { createApiRoutes } from "./src/routes/apiRoutes.js";
 import { addCreatorInfo } from "./src/middleware/creatorInfo.js";
-
-dotenv.config();
 
 // ══════════════════════════════════════════════════════════════
 // SERVER CONFIGURATION

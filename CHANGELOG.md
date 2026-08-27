@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.4.1] - 2026-08-27
+
+### Security
+- **CRITICAL**: Fixed unauthenticated SSRF in `/api/stream/proxy` and `/api/stream/ts-proxy` — the proxy endpoint's domain allowlist had an escape hatch (`pathname.endsWith(".m3u8")`) that let any host through, and `ts-proxy` had no destination check at all. Both could be used to fetch internal services (127.0.0.1, 169.254.169.254) and read responses.
+- Added shared `streamProxy.helper.js` with a real allowlist by registrable domain, private/loopback/link-local address blocking as a second layer, and https-only scheme enforcement. Both endpoints now use this guard.
+- Removed dead domain `megaplay-1.buzz` from allowlist; added `vid-tube.site` and CDNs currently serving streams (`norami.top`, `kryntal.top`, `akirax.buzz`).
+- Added `SECURITY.md` with vulnerability reporting policy (GitHub private vulnerability reporting preferred, Telegram fallback).
+
+### Fixed
+- **Environment loading**: Fixed `dotenv.config()` being called after static imports — helpers reading `process.env` at module top level (mirror, cache, proxy, streamProxy) were never receiving `.env` values. Changed to `import "dotenv/config"` as the first import so `.env` is populated before any helper module loads. Affected settings: `MIRROR_DOMAINS`, `MIRROR_CACHE_TTL`, `CACHE_MAX_SIZE`, `CACHE_DEFAULT_TTL`, `SCRAPER_API_KEY`, `FLARESOLVERR_URL`, `STREAM_PROXY_DOMAINS`, `STREAM_PROXY_REFERER`.
+
+### Added
+- **Stream Proxy Allowlist Config**: New `STREAM_PROXY_DOMAINS` env var to override the built-in domain allowlist (comma-separated).
+- **Stream Proxy Referer Config**: New `STREAM_PROXY_REFERER` env var to override the Referer header sent to stream CDNs (default: `https://megaplay.buzz/`).
+
 ## [2.4.0] - 2026-08-14
 
 ### Added
