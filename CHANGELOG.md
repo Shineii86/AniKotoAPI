@@ -20,6 +20,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Stream Proxy Allowlist Config**: New `STREAM_PROXY_DOMAINS` env var to override the built-in domain allowlist (comma-separated).
 - **Stream Proxy Referer Config**: New `STREAM_PROXY_REFERER` env var to override the Referer header sent to stream CDNs (default: `https://megaplay.buzz/`).
 
+### Credits
+- **[jamil182](https://github.com/jamil182)** — Reported and fixed the SSRF vulnerability (PR #2), added SECURITY.md (PR #3)
+
 ## [2.4.0] - 2026-08-14
 
 ### Added

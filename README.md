@@ -25,6 +25,7 @@
   <img src="https://img.shields.io/badge/Version-2.4.1-f43f8e?style=flat-square&logoColor=white" alt="Version"/>
   <img src="https://img.shields.io/badge/Endpoints-38-6366f1?style=flat-square&logoColor=white" alt="Endpoints"/>
   <img src="https://img.shields.io/badge/Anime-10000+-a855f7?style=flat-square&logoColor=white" alt="Anime Database"/>
+  <img src="https://img.shields.io/badge/Maintenance-Active-22c55e?style=flat-square&logo=github&logoColor=white" alt="Maintenance"/>
 </p>
 
 <p align="center">
@@ -2573,6 +2574,12 @@ git push origin feature/amazing-feature
 - [Shields.io](https://shields.io/) — Badges for README
 - [Star History](https://star-history.com/) — GitHub star history charts
 - [Capsule Render](https://github.com/kyechan99/capsule-render) — Header banner generator
+
+### 🔒 Security Contributors
+
+| Contributor | Contribution |
+|:---|:---|
+| [jamil182](https://github.com/jamil182) | Reported & fixed unauthenticated SSRF in stream proxy endpoints (PR #2), added SECURITY.md (PR #3) |
 
 ---
 
