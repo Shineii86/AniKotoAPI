@@ -26,7 +26,7 @@ curl -s "https://anikototvapi.vercel.app/api/health" | python3 -m json.tool
   "success": true,
   "results": {
     "status": "healthy",
-    "version": "2.4.0",
+    "version": "2.4.1",
     "uptime": "0h 1m 21s",
     "uptimeSeconds": 81,
     "timestamp": "2026-07-30T02:20:46.153Z",
@@ -2036,7 +2036,7 @@ curl -s "https://anikototvapi.vercel.app/api/health" | python3 -m json.tool
   "success": true,
   "results": {
     "status": "healthy",
-    "version": "2.4.0",
+    "version": "2.4.1",
     "uptime": "0h 1m 21s",
     "uptimeSeconds": 81,
     "timestamp": "2026-07-30T02:20:46.153Z",

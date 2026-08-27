@@ -1,7 +1,7 @@
 /**
  * ============================================================================
  *  AniKotoAPI — Architecture Document
- *  Version : 2.4.0
+ *  Version : 2.4.1
  *  Generated: 2026-08-14
  * ============================================================================
  *
@@ -832,7 +832,7 @@
  *  │  VERSION HISTORY                                                     │
  *  ├──────────────────────────────────────────────────────────────────────┤
  *  │                                                                      │
- *  │  v2.4.0  (Current)                                                  │
+ *  │  v2.4.1  (Current)                                                  │
  *  │    • 28 endpoints, 28 extractors                                    │
  *  │    • LRU cache with per-endpoint TTL                                │
  *  │    • 5-mirror failover system                                       │

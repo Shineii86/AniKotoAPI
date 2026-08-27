@@ -1,6 +1,6 @@
 {
   "name": "AniKotoAPI",
-  "version": "2.4.0",
+  "version": "2.4.1",
   "description": "A restful API to provide all information about anime from anikototv.to",
   "main": "./server.js",
   "scripts": {
