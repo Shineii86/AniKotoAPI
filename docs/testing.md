@@ -136,7 +136,7 @@ Marked with `optional: true`. Instead of failing, they print `⏭️ Skipped` wh
 ```
 📡 Detected local server — using localhost:4444
 
-🧪 Running 46 tests...
+🧪 Running 48 tests...
 
 📡 API: http://localhost:4444/api
 
@@ -148,7 +148,7 @@ Marked with `optional: true`. Instead of failing, they print `⏭️ Skipped` wh
 ✅ Episodes Ajax (1304ms)
 
 ==================================================
-📊 Results: 35 passed, 0 failed, 0 skipped, 35 total
+📊 Results: 48 passed, 0 failed, 0 skipped, 48 total
 ==================================================
 
 ⚡ Performance:
@@ -188,12 +188,12 @@ The test suite reports:
 ```
 test.js
 ├── detectBase()           # Auto-detect local vs live API
-├── tests[]                # Static test definitions (34 tests)
+├── tests[]                # Static test definitions (45 tests)
 ├── runAll()
 │   ├── detectBase()       # Resolve API URL
-│   ├── fetchJson()        # Pre-fetch dynamic data (animeId, linkId)
-│   ├── push dynamic tests # Episodes Ajax, Stream Resolve
-│   └── runTest() × 35     # Execute each test sequentially
+│   ├── fetchJson()        # Pre-fetch dynamic data (animeId, linkId, stream URL)
+│   ├── push dynamic tests # Episodes Ajax, Stream Resolve, Stream Proxy
+│   └── runTest() × 48     # Execute each test sequentially
 ├── runTest()              # Single test runner with timing
 └── results[]              # Pass/fail/skip tracking
 ```
@@ -204,4 +204,6 @@ test.js
 - **No mocking** — all tests hit real HTTP endpoints
 - **Cache aware** — repeated runs benefit from server-side caching
 - **Dynamic tests** resolve dependencies at runtime (animeId, linkId)
-- **Stream Resolve** may skip if no valid link_id is available (data expires)
+- **Stream Resolve / Stream Proxy** may skip if no valid link_id is available (data expires)
+- **`checkText`** validates raw (non-JSON) responses such as proxied M3U8 playlists
+- **`expectStatus`** asserts an exact rejection status (e.g. `403` for the SSRF guard)

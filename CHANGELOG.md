@@ -16,15 +16,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Shared Helpers**: New `src/helper/response.helper.js` (`jsonResponse`/`jsonError` envelopes) and `src/helper/validation.helper.js` (`validateSlug`, case-preserving `validateLetter`, `validatePage`, `validateQueryWord`)
 - **Route Split**: New `src/routes/` domain modules — `content.routes.js`, `stream.routes.js`, `discovery.routes.js`, `enrichment.routes.js`, `system.routes.js` — orchestrated by `apiRoutes.js` (request counter, `/api` mount, shared context); `server.js` rewritten as a composition root (middleware wiring, trust proxy, cache scope)
 - **OpenAPI Module**: New `src/configs/openapi.config.js` — spec builder moved out of `apiRoutes.js` (`buildOpenApiSpec` + `OPENAPI_PATH_COUNT`): 49 paths / 13 tags, reported by `/api/stats` as `openapiPaths`
-- **Tests**: 6 new cases in `test.js` — `AniList by ID`, `AniList by MAL`, `AniList Season` (positive) plus three `expectStatus: 400` negatives for page/slug/letter validation; suite now **46 tests** (44 passing, 2 upstream-optional skips)
+- **Tests**: 6 new cases in `test.js` — `AniList by ID`, `AniList by MAL`, `AniList Season` (positive) plus three `expectStatus: 400` negatives for page/slug/letter validation — plus `Proxy SSRF Guard` (`expectStatus: 403`) and a dynamic `Stream Proxy` raw-body check (`checkText`, validates the rewritten playlist); `Servers` now swaps in real `server_ids` (the `ids=1` placeholder made upstream return 500) and the runner gained a `checkText` branch for non-JSON responses; suite now **48 tests** (48 passing, 0 skipped)
 - **TRUST_PROXY**: New env var (`.env.example`) — `app.set("trust proxy", parseTrustProxy(...))` so rate limiting keys on the real client IP behind Render/Vercel/Cloudflare instead of the proxy's address
 
 ### Changed
+- **Stream Proxy Upgrade**: `/api/stream/proxy` and `/api/stream/ts-proxy` reworked — playlists now rewrite **every** media reference (bare lines *and* `URI="…"` attributes on `#EXT-X-KEY`/`#EXT-X-MAP`/I-frame playlists, leaving non-allowlisted hosts untouched), upstream fetches get one bounded retry on network/429/5xx errors, a non-playlist body is rejected with `415`, segments are **streamed** instead of buffered with `Range` forwarded upstream, HTML error pages are rejected instead of served as media, `Content-Type` is derived per extension (`.vtt`, `.m4a`, `.mp4`, …) and `Accept-Ranges` is only advertised when the CDN supports it; decoy segment paths (`.jpg`/`.html`/`.js` names serving MPEG-TS) are answered as `video/mp2t` either way
+- **Proxy Allowlist**: `DEFAULT_PROXY_DOMAINS` now includes MegaPlay's current media hosts — `shiora.top` (resolved manifests), `ivorysummit.world` (subtitles/thumbnails), `nexabloom.top` (content manifests) and `eclipseharbor.space` (content segments); dead `megaplay-1.buzz` paths no longer matter since resolution goes through `getSources`
+- **Resolver CDN Selection**: `resolveStreamUrl` stops forwarding the embed's `s=` CDN token to `getSources` — it routes segments to TikTok's ad CDN (unreachable from many networks, impossible to allowlist safely) instead of the plain `/anime/` content CDN
 - **Cache Stampede Guard**: `fetchWithMirror` dedupes concurrent identical upstream fetches through an in-flight `Map` (`inflightFetches`) — parallel requests for the same URL share one fetch and the promise self-removes on settle, so a cold cache no longer fans out into 5-mirror stampedes
 - **Cache Bypass**: `?refresh=1` bypasses the LRU for the entire request chain via an `AsyncLocalStorage` scope (`runWithCacheScope` in `cache.helper.js`), fresh results repopulate the cache, and every lookup is reported on the `X-Cache: HIT/MISS/BYPASS` response header; `/api/cache/stats` now includes `bypasses`
 - **Input Validation**: Global `?page=` guard (400 outside 1–500, mounted in `apiRoutes.js`), slug guard on `/info`, `/episodes`, `/watch`, `/download`, `/seasons`, `/watch-order`, `/search`, `/episodes-ajax` and letter guard on `/az-list/:letter` — malformed input is rejected with 400 before any mirror is touched; unknown query words capped at 256 chars
 - **Version**: Bumped to 2.6.0
-- **Docs Sync**: README, `docs/index.md`, `docs/architecture.md`, `docs/endpoints.md`, `docs/testing.md` and `public/index.html` synced to 42 content endpoints / 31 controllers / 29 extractors / 46 tests, with new project-tree entries for `src/middleware/` and the split `src/routes/`, new endpoint reference sections for `/anilist` and `/anilist/season`, and an Enrichment section in the endpoint overview tables
+- **Docs Sync**: README, `docs/index.md`, `docs/architecture.md`, `docs/endpoints.md`, `docs/streaming.md`, `docs/testing.md` and `public/index.html` synced to 42 content endpoints / 31 controllers / 29 extractors / 48 tests, with new project-tree entries for `src/middleware/` and the split `src/routes/`, new endpoint reference sections for `/anilist` and `/anilist/season`, an Enrichment section in the endpoint overview tables, and rewritten `/stream/proxy` + `/stream/ts-proxy` docs (current allowlist, rewrite rules, `415`/`403` answers, streaming behaviour)
+
+### Fixed
+- **Stream Resolver (BREAKING upstream drift)**: the legacy `/ajax/sources` host (`megaplay-1.buzz`) no longer resolves in DNS, so `/stream/resolve` and `/stream/qualities` were failing — resolution now calls `stream/getSourcesNew` → `stream/getSources` on the embed host itself and decrypts the AES-256-CBC `enc` payload (key/IV taken from the player) to the `master.m3u8` URL; the legacy call is kept as a fallback, `kind: "captions"` tracks are counted as subtitles and `skipData` is normalized to the site's `[start, end]` array shape
+- **Stream Qualities**: the qualities fetch sent no player-origin Referer and was answered with CDN 403, so `/stream/qualities` always reported `totalQualities: 0` — it now sends `streamRefererHeaders()` and returns the real variant list (verified: `1080p`)
 
 ### Example
 ```
@@ -37,11 +44,15 @@ GET /api/search?keyword=naruto&page=2&refresh=1   # X-Cache: BYPASS
 ### Verified
 ```
 node --check: all 93 JS files OK
-Local suite: 44 passed / 0 failed / 2 skipped (46 total)
+Local suite: 48 passed / 0 failed / 0 skipped (48 total)
 /api/anilist/21 → 200, /api/anilist?mal=21 → 200, /api/anilist/season → 200
 /api/anilist/999999999 → 404 Anime not found on AniList
 /api/openapi → 49 paths, /api/stats → openapiPaths: 49
 /api/health, /api/mirrors, /api/cache/stats → 200 with new fields
+/stream/resolve → real master.m3u8, qualities ["1080p"], /stream/qualities → 1
+/stream/proxy → rewritten playlist (#EXTM3U + proxied variant line)
+/stream/ts-proxy → 200 video/mp2t 1161464B (decoy .jpg segment), Range forwarded
+/stream/proxy?url=https://example.com/x.m3u8 → 403, non-playlist body → 415
 ```
 
 ## [2.5.1] - 2026-10-13

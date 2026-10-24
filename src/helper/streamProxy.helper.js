@@ -36,6 +36,14 @@ const DEFAULT_PROXY_DOMAINS = [
   "norami.top",
   "kryntal.top",
   "akirax.buzz",
+  // MegaPlay's current media CDN (resolved streams + segments) and the
+  // subtitle/thumbnail host served alongside it
+  "shiora.top",
+  "ivorysummit.world",
+  // Content CDN behind getSources without the `s=` token: manifests on
+  // fetch.nexabloom.top, segments on rotating *.eclipseharbor.space hosts
+  "nexabloom.top",
+  "eclipseharbor.space",
 ];
 
 // Parse the allowlist from env or use defaults

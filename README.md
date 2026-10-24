@@ -2142,23 +2142,23 @@ curl "https://anikototvapi.vercel.app/api/stream/qualities?url=https://example.c
 /stream/proxy
 ```
 
-Rewrites relative URLs inside an M3U8 playlist to proxy through the API, adding CORS headers for cross-origin playback.
+Rewrites every media reference inside an M3U8 playlist (bare lines and `URI="…"` attributes) to proxy through the API, adding CORS headers for cross-origin playback. Only allowlisted domains are accepted (`403` otherwise); a non-playlist body is rejected with `415`.
 
 #### Parameters
 
 | Parameter | Type | Mandatory | Default | Description |
 | :-------: | :--: | :-------: | :-----: | :---------: |
-| `url` | `string` | Yes ✔️ | — | M3U8 playlist URL |
+| `url` | `string` | Yes ✔️ | — | M3U8 playlist URL (allowed domain) |
 
 #### Example of request
 
 ```bash
-curl "https://anikototvapi.vercel.app/api/stream/proxy?url=https://example.com/playlist.m3u8"
+curl "https://anikototvapi.vercel.app/api/stream/proxy?url=https://vidtube.site/hls/abc123/master.m3u8"
 ```
 
 #### Sample Response
 
-Raw M3U8 content with URLs rewritten to `https://anikototvapi.vercel.app/api/stream/proxy?url=...` and `https://anikototvapi.vercel.app/api/stream/ts-proxy?url=...` for `.ts` segments.
+Raw M3U8 content with child playlists rewritten to `https://anikototvapi.vercel.app/api/stream/proxy?url=...` and segments to `https://anikototvapi.vercel.app/api/stream/ts-proxy?url=...`.
 
 ---
 
@@ -2170,23 +2170,23 @@ Raw M3U8 content with URLs rewritten to `https://anikototvapi.vercel.app/api/str
 /stream/ts-proxy
 ```
 
-Proxies `.ts` video segments with proper `Content-Type: video/mp2t` and CORS headers.
+Streams video segments with the correct `Content-Type` (`.ts` → `video/mp2t`) and CORS headers, forwarding `Range` upstream when the CDN supports it.
 
 #### Parameters
 
 | Parameter | Type | Mandatory | Default | Description |
 | :-------: | :--: | :-------: | :-----: | :---------: |
-| `url` | `string` | Yes ✔️ | — | `.ts` segment URL |
+| `url` | `string` | Yes ✔️ | — | Segment URL (allowed domain) |
 
 #### Example of request
 
 ```bash
-curl "https://anikototvapi.vercel.app/api/stream/ts-proxy?url=https://example.com/segment.ts"
+curl "https://anikototvapi.vercel.app/api/stream/ts-proxy?url=https://vidtube.site/hls/abc123/segment_001.ts"
 ```
 
 #### Sample Response
 
-Binary video segment data with `Content-Type: video/mp2t` and `Access-Control-Allow-Origin: *`.
+Binary video segment data (streamed, not buffered) with `Content-Type: video/mp2t` and `Access-Control-Allow-Origin: *`.
 
 ---
 
@@ -2453,7 +2453,7 @@ CMD ["node", "server.js"]
 
 | Version | Date | Key Changes |
 |:---|:---|:---|
-| **2.6.0** | 2026-10-24 | Full diagnostic sweep + cross-repo comparison, modularised middleware/routes/OpenAPI, cache stampede guard, `?refresh=1` + `X-Cache`, input validation, `trust proxy` rate-limit fix, AniList enrichment endpoints |
+| **2.6.0** | 2026-10-24 | Full diagnostic sweep + cross-repo comparison, modularised middleware/routes/OpenAPI, cache stampede guard, `?refresh=1` + `X-Cache`, input validation, `trust proxy` rate-limit fix, AniList enrichment endpoints, stream resolver + proxy overhaul (48 tests) |
 | **2.5.1** | 2026-10-13 | Domain sync vs official hub, spotlight carousel fix, direct embed providers (`/api/stream/embeds`), info `externalIds` + latest-episode checker, full docs pass, diagnostic sweep, Dockerfile Node 22 |
 | **2.4.1** | 2026-08-27 | Security: fixed SSRF in stream proxies, dotenv load order fix, SECURITY.md |
 | **2.2.0** | 2026-07-28 | Streaming resolver, M3U8/TS proxy, 5 new endpoints, bug fixes, full diagnostic sweep |

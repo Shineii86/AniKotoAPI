@@ -40,11 +40,13 @@ const tests = [
   { name: "Info External IDs", url: "/info?id=one-piece-odmau", check: (d) => d.results?.externalIds?.malId },
   { name: "Episodes", url: "/episodes/one-piece-odmau", check: (d) => d.results?.episodes },
   { name: "Latest Episode", url: "/episodes/latest?slug=one-piece-odmau", check: (d) => d.results?.latest?.episode_no && d.results?.latest?.server_ids },
+  // NOTE: `Servers` placeholder URL is swapped for real server_ids below
   { name: "Servers", url: "/servers?ids=1", check: (d) => d.results, optional: true },
   // Streaming
   { name: "Stream", url: "/watch?slug=one-piece-odmau&ep=1", check: (d) => d.results?.servers || d.results?.episodeNumber },
   { name: "Embed Providers", url: "/stream/embeds?slug=one-piece-odmau&ep=1", check: (d) => d.results?.providers?.length > 0 },
   { name: "Embed (direct MAL)", url: "/stream/embeds?mal=21&ep=1&provider=megavid", check: (d) => d.results?.providers?.[0]?.url?.includes("megavid.buzz") },
+  { name: "Proxy SSRF Guard", url: "/stream/proxy?url=https://example.com/x.m3u8", expectStatus: 403 },
 
 
   // Discovery endpoints
@@ -139,6 +141,27 @@ async function runTest(test) {
       return;
     }
     
+    // ---- FEATURE: Raw-body tests — non-JSON responses such as playlists ----
+    if (test.checkText) {
+      const text = await res.text();
+      if (test.checkText(text)) {
+        console.log(`✅ ${test.name} (${duration}ms)`);
+        passed++;
+        results.push({ name: test.name, status: "PASS", duration });
+        return;
+      }
+      if (test.optional) {
+        console.log(`⏭️  ${test.name} - Skipped (validation failed) (${duration}ms)`);
+        skipped++;
+        results.push({ name: test.name, status: "SKIP", reason: "Validation failed", duration });
+        return;
+      }
+      console.log(`❌ ${test.name} - Validation failed (${duration}ms)`);
+      failed++;
+      results.push({ name: test.name, status: "FAIL", reason: "Validation failed", duration });
+      return;
+    }
+
     const data = await res.json();
     
     if (!data.success) {
@@ -210,6 +233,9 @@ async function runAll() {
     if (epData?.success && epData.results?.episodes?.length > 0) {
       const sid = epData.results.episodes[0].server_ids;
       if (sid) {
+        // NOTE: Real server_ids — the placeholder ids=1 makes upstream return 500
+        const serversTest = tests.find((t) => t.name === "Servers");
+        if (serversTest) serversTest.url = `/servers?ids=${encodeURIComponent(sid)}`;
         const srvData = await fetchJson(`/servers?ids=${encodeURIComponent(sid)}`);
         if (srvData?.success && srvData.results?.length > 0) {
           linkId = srvData.results[0].link_id || "";
@@ -222,6 +248,19 @@ async function runAll() {
   tests.push({ name: "Episodes Ajax", url: `/episodes-ajax/${animeId}`, check: (d) => d.results?.episodes || d.results?.totalEpisodes });
   if (linkId) {
     tests.push({ name: "Stream Resolve", url: `/stream/resolve?id=${encodeURIComponent(linkId)}&slug=one-piece-odmau`, check: (d) => d.results?.url, optional: true });
+    // ---- FEATURE: Proxy chain — resolved manifest must come back rewritten ----
+    try {
+      const resolved = await fetchJson(`/stream/resolve?id=${encodeURIComponent(linkId)}&slug=one-piece-odmau`);
+      const master = resolved?.results?.url;
+      if (master) {
+        tests.push({
+          name: "Stream Proxy",
+          url: `/stream/proxy?url=${encodeURIComponent(master)}`,
+          checkText: (text) => text.includes("#EXTM3U") && text.includes("/api/stream/proxy?url="),
+          optional: true,
+        });
+      }
+    } catch (_) { /* upstream unavailable — test is not pushed */ }
   }
 
   // ---- FEATURE: Run all tests sequentially ----

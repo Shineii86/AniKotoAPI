@@ -439,7 +439,7 @@ curl -s "https://anikototvapi.vercel.app/api/stream/qualities?url=https%3A%2F%2F
 
 Returns rewritten M3U8 content with `Content-Type: application/vnd.apple.mpegurl`.
 
-**Allowed domains:** `vidtube.site`, `vidplay.site`, `megaplay.buzz`, `megaplay-1.buzz`, `cdn.anipixcdn.co`
+**Allowed domains:** `megaplay.buzz`, `vidtube.site`, `vid-tube.site`, `vidplay.site`, `anipixcdn.co`, `norami.top`, `kryntal.top`, `akirax.buzz`, `shiora.top`, `ivorysummit.world`, `nexabloom.top`, `eclipseharbor.space` (override with `STREAM_PROXY_DOMAINS`)
 
 ```bash
 curl -s "https://anikototvapi.vercel.app/api/stream/proxy?url=https://vidtube.site/hls/abc123/master.m3u8"
@@ -449,12 +449,12 @@ curl -s "https://anikototvapi.vercel.app/api/stream/proxy?url=https://vidtube.si
 ```
 #EXTM3U
 #EXT-X-STREAM-INF:BANDWIDTH=800000,RESOLUTION=640x360
-https://anikototvapi.vercel.app/api/stream/ts-proxy?url=https%3A%2F%2Fvidtube.site%2Fhls%2Fabc123%2F360p.m3u8
-#EXT-X-STREAM-INF:BANDWIDTH=1400000,RESOLUTION=854x480
-https://anikototvapi.vercel.app/api/stream/ts-proxy?url=https%3A%2F%2Fvidtube.site%2Fhls%2Fabc123%2F480p.m3u8
+/api/stream/proxy?url=https%3A%2F%2Fvidtube.site%2Fhls%2Fabc123%2F360p.m3u8
+#EXTINF:4.0,
+/api/stream/ts-proxy?url=https%3A%2F%2Fvidtube.site%2Fhls%2Fabc123%2Fsegment_001.ts
 ```
 
-> The proxy rewrites all internal URLs to route through `/stream/ts-proxy`, so every TS segment fetch also goes through the proxy — fully CORS-free.
+> The proxy rewrites every media reference — bare segment lines **and** `URI="…"` attributes (`#EXT-X-KEY`, `#EXT-X-MAP`, I-frame playlists) — so child playlists go to `/stream/proxy` and segments to `/stream/ts-proxy`, fully CORS-free. References on hosts outside the allowlist keep their original URL. A response that is not an HLS playlist is rejected with `415`.
 
 ---
 
@@ -462,9 +462,9 @@ https://anikototvapi.vercel.app/api/stream/ts-proxy?url=https%3A%2F%2Fvidtube.si
 
 | Param  | Type   | Description                          |
 |--------|--------|--------------------------------------|
-| `url`  | string | `.ts` segment URL (required)         |
+| `url`  | string | Media segment URL (required, allowed domain) |
 
-Returns binary TS video data with `Content-Type: video/mp2t`.
+Returns binary segment data with a correct `Content-Type` (`.ts` → `video/mp2t`), streamed rather than buffered, with `Range` forwarded upstream when the CDN supports it. Decoy segment paths served as `image/jpeg` or `text/html` are still answered as `video/mp2t`.
 
 ```bash
 curl -s "https://anikototvapi.vercel.app/api/stream/ts-proxy?url=https://vidtube.site/hls/abc123/segment_001.ts" --output segment.ts
@@ -543,9 +543,9 @@ curl -s "https://anikototvapi.vercel.app/api/mapper-servers?malId=21&slug=one-pi
 Upstream video CDNs (vidtube.site, vidplay.site, etc.) typically set restrictive CORS headers that block browser requests. The M3U8 proxy solves this by:
 
 1. Fetching the M3U8 playlist server-side
-2. Rewriting all internal URLs to point back through the API proxy
+2. Rewriting every media reference (bare lines and `URI="…"` attributes) back through the API proxy
 3. Serving the rewritten playlist with proper CORS headers
-4. Proxying every `.ts` segment request through `/stream/ts-proxy`
+4. Proxying every segment request through `/stream/ts-proxy`, streamed with `Range` passthrough
 
 ### How It Works
 
@@ -573,13 +573,20 @@ Browser                AniKotoAPI Proxy           Upstream CDN
 
 The proxy only serves URLs from these whitelisted domains:
 
-- `vidtube.site`
-- `vidplay.site`
 - `megaplay.buzz`
-- `megaplay-1.buzz`
-- `cdn.anipixcdn.co`
+- `vidtube.site`
+- `vid-tube.site`
+- `vidplay.site`
+- `anipixcdn.co`
+- `norami.top`
+- `kryntal.top`
+- `akirax.buzz`
+- `shiora.top`
+- `ivorysummit.world`
+- `nexabloom.top`
+- `eclipseharbor.space`
 
-Requests with URLs from other domains will be rejected.
+Requests with URLs from other domains will be rejected with `403`.
 
 ### Usage Example
 

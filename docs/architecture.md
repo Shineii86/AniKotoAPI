@@ -288,7 +288,7 @@
  *   │   ├── performance-benchmarker.md
  *   │   ├── security-architect.md
  *   │   └── technical-writer.md
- *   └── test.js                      # Integration test suite (46 tests)
+ *   └── test.js                      # Integration test suite (48 tests)
  */
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -665,7 +665,7 @@
  *      empty or malformed data.
  *    • Controllers detect missing required fields and return appropriate
  *      error messages rather than empty objects.
- *    • Monitoring via test.js integration suite (46 tests) catches
+ *    • Monitoring via test.js integration suite (48 tests) catches
  *      structural regressions.
  */
 
@@ -799,7 +799,7 @@
  *  │  INTEGRATION TESTS (test.js)                                         │
  *  ├──────────────────────────────────────────────────────────────────────┤
  *  │                                                                      │
- *  │  • 46 end-to-end tests covering all 42 content endpoints.          │
+ *  │  • 48 end-to-end tests covering all 42 content endpoints.          │
  *  │  • Each test hits the live API and validates:                       │
  *  │    - HTTP status code (200, or expected error code)                 │
  *  │    - Response shape (success: true, data present)                   │
@@ -862,7 +862,7 @@
  *  │    • Input validation (slug/letter/page) with 400 rejection         │
  *  │    • AniList enrichment endpoints + seasonal chart                  │
  *  │    • OpenAPI 3.0 spec generated from src/configs/openapi.config.js  │
- *  │    • 46 integration tests (44 passing, 2 upstream-optional)         │
+ *  │    • 48 integration tests (48 passing, 0 skipped)                   │
  *  │                                                                      │
  *  └──────────────────────────────────────────────────────────────────────┘
  *

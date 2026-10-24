@@ -995,33 +995,33 @@ curl "https://anikototvapi.vercel.app/api/anilist/season?season=WINTER&year=2026
 
 ## GET /stream/proxy
 
-M3U8 playlist proxy — rewrites relative URLs to proxy endpoints for CORS-free playback.
+M3U8 playlist proxy — rewrites every media reference (bare lines and `URI="…"` attributes) to proxy endpoints for CORS-free playback.
 
 | Param | Type | Required | Description |
 |-------|------|----------|-------------|
-| `url` | string | Yes | M3U8 playlist URL |
+| `url` | string | Yes | M3U8 playlist URL (allowed domain only) |
 
 ```bash
-curl "https://anikototvapi.vercel.app/api/stream/proxy?url=https://example.com/playlist.m3u8"
+curl "https://anikototvapi.vercel.app/api/stream/proxy?url=https://vidtube.site/hls/abc123/master.m3u8"
 ```
 
-Returns rewritten M3U8 content with all `.m3u8` and `.ts` URLs pointing to proxy endpoints.
+Returns rewritten M3U8 content with child playlists pointing at `/stream/proxy` and segments at `/stream/ts-proxy`. Responses without `#EXTM3U` are rejected with `415`; hosts outside the allowlist with `403`.
 
 ---
 
 ## GET /stream/ts-proxy
 
-TS video segment proxy — serves `.ts` segments with proper Content-Type and CORS headers.
+Media segment proxy — streams segments with the correct Content-Type and CORS headers.
 
 | Param | Type | Required | Description |
 |-------|------|----------|-------------|
-| `url` | string | Yes | `.ts` segment URL |
+| `url` | string | Yes | Segment URL (allowed domain only) |
 
 ```bash
-curl "https://anikototvapi.vercel.app/api/stream/ts-proxy?url=https://example.com/segment.ts"
+curl "https://anikototvapi.vercel.app/api/stream/ts-proxy?url=https://vidtube.site/hls/abc123/segment_001.ts"
 ```
 
-Returns binary video segment with `Content-Type: video/mp2t` and `Access-Control-Allow-Origin: *`.
+Returns the binary segment streamed (not buffered) with `Content-Type: video/mp2t` and `Access-Control-Allow-Origin: *`. `Range` is forwarded upstream when supported; decoy segment paths served as `image/jpeg` or `text/html` are still answered as `video/mp2t`.
 
 ---
 
