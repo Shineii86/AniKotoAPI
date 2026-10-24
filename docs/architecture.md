@@ -1,7 +1,7 @@
 /**
  * ============================================================================
  *  AniKotoAPI — Architecture Document
- *  Version : 2.6.0
+ *  Version : 2.6.1
  *  Generated: 2026-10-13
  * ============================================================================
  *
@@ -853,16 +853,19 @@
  *  │  VERSION HISTORY                                                     │
  *  ├──────────────────────────────────────────────────────────────────────┤
  *  │                                                                      │
- *  │  v2.6.0  (Current)                                                  │
- *  │    • 42 content endpoints, 29 extractors, 31 controllers            │
- *  │    • Modular middleware (requestId/cors/security/rateLimit/        │
- *  │      timeout/validation) + per-domain route modules                 │
- *  │    • In-flight upstream dedup (cache-stampede guard)                │
- *  │    • ?refresh=1 cache bypass + X-Cache HIT/MISS/BYPASS header       │
- *  │    • Input validation (slug/letter/page) with 400 rejection         │
- *  │    • AniList enrichment endpoints + seasonal chart                  │
- *  │    • OpenAPI 3.0 spec generated from src/configs/openapi.config.js  │
+ *  │  v2.6.1  (Current)                                                  │
+ *  │    • Stream resolver rebuilt on getSources + AES decrypt            │
+ *  │    • Proxy rewrite covers bare lines and URI attributes             │
+ *  │    • Segments streamed with Range, retries, 415/403 guards          │
+ *  │    • Live CDN allowlist (shiora/ivorysummit/nexabloom/…)            │
  *  │    • 48 integration tests (48 passing, 0 skipped)                   │
+ *  │                                                                      │
+ *  │  v2.6.0                                                             │
+ *  │    • 42 content endpoints, 29 extractors, 31 controllers            │
+ *  │    • Modular middleware + per-domain route modules                  │
+ *  │    • Cache-stampede guard, ?refresh=1 bypass, validation            │
+ *  │    • AniList enrichment endpoints + seasonal chart                  │
+ *  │    • OpenAPI 3.0 spec from src/configs/openapi.config.js            │
  *  │                                                                      │
  *  └──────────────────────────────────────────────────────────────────────┘
  *

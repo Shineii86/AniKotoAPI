@@ -372,7 +372,7 @@ const OPENAPI_PATH_COUNT = Object.keys(PATHS).length;
  * @returns {object} OpenAPI document
  *
  * @example
- *   res.json(buildOpenApiSpec("2.6.0"));
+ *   res.json(buildOpenApiSpec("2.6.1"));
  */
 const buildOpenApiSpec = (version, baseUrl = "https://anikototvapi.vercel.app/api") => ({
   openapi: "3.0.3",

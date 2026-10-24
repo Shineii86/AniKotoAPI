@@ -9,7 +9,7 @@
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://anikototvapi.vercel.app" />
   <meta property="og:image" content="https://anikototvapi.vercel.app/share.png" />
-  <meta property="og:description" content="Free anime REST API with 42 endpoints. Search, filter, stream episodes, get rankings, and more. No API key required. Built with Node.js, Express, and Cheerio." />
+  <meta property="og:description" content="Free anime REST API with 42 endpoints. Search, filter, stream episodes, get rankings, schedules, and AniList metadata. No API key required. Built with Node.js, Express, and Cheerio." />
   <meta property="og:site_name" content="AniKotoAPI" />
   <meta property="og:locale" content="en_US" />
   <meta property="og:image:secure_url" content="https://anikototvapi.vercel.app/share.png" />
@@ -21,11 +21,11 @@
   <meta name="twitter:site" content="@Shineii86" />
   <meta name="twitter:creator" content="@Shineii86" />
   <meta name="twitter:title" content="AniKotoAPI — Free Anime REST API | 42 Endpoints" />
-  <meta name="twitter:description" content="Free anime REST API with 42 endpoints. Search, filter, stream episodes, get rankings, and more. No API key required." />
+  <meta name="twitter:description" content="Free anime REST API with 42 endpoints. Search, filter, stream episodes, get rankings, schedules, and AniList metadata. No API key required." />
   <meta name="twitter:image" content="https://anikototvapi.vercel.app/share.png" />
   <meta name="twitter:image:alt" content="AniKotoAPI - Free Anime REST API with 42 endpoints" />
   <meta name="twitter:domain" content="anikototvapi.vercel.app" />
-  <meta name="description" content="Free anime REST API with 42 endpoints. Search, filter, stream episodes with M3U8 proxy, get top rankings, schedules, and more. No API key required. Open source Node.js + Express." />
+  <meta name="description" content="Free anime REST API with 42 endpoints. Search, filter, stream episodes with M3U8 proxy, get top rankings, schedules, and AniList metadata. No API key required. Open source Node.js + Express." />
   <meta name="author" content="Shinei Nouzen" />
   <meta name="keywords" content="anime api, free anime api, rest api, anime data, anime streaming api, hls proxy, m3u8 proxy, anime episodes, anime search, anime database, nodejs api, express api, web scraping api, anikoto, anime list api, no api key" />
   <meta name="robots" content="index, follow" />
@@ -234,7 +234,7 @@
     "@context": "https://schema.org",
     "@type": "WebAPI",
     "name": "AniKotoAPI",
-    "description": "Free anime REST API with 42 endpoints. Search, filter, stream episodes with M3U8 proxy, get rankings, schedules, and more. No API key required.",
+    "description": "Free anime REST API with 42 endpoints. Search, filter, stream episodes with M3U8 proxy, get rankings, schedules, and AniList metadata. No API key required.",
     "url": "https://anikototvapi.vercel.app",
     "image": "https://anikototvapi.vercel.app/share.png",
     "documentation": "https://github.com/Shineii86/AniKotoAPI",
@@ -269,7 +269,7 @@
 
     <section class="hero">
       <div>
-        <div class="hero-badge"><span class="dot"></span> Free &middot; No API key &middot; Open source</div>
+        <div class="hero-badge"><span class="dot"></span> Free &middot; No API key &middot; Open source &middot; v2.6.1</div>
         <h1>The anime data API for your next project</h1>
         <p class="hero-sub">Browse, search, and stream anime data from AniKoto. Real-time scraping with 42 endpoints, in-memory caching, and zero configuration.</p>
         <div class="hero-actions">
@@ -303,6 +303,7 @@ fetch("https://anikototvapi.vercel.app/api")
           <button class="console-btn" onclick="setEndpoint('stream', event)">Stream</button>
           <button class="console-btn" onclick="setEndpoint('random', event)">Random</button>
           <button class="console-btn" onclick="setEndpoint('schedule', event)">Schedule</button>
+          <button class="console-btn" onclick="setEndpoint('anilist', event)">AniList</button>
           <button class="console-send" onclick="runConsole()">Run</button>
         </div>
       </div>
@@ -311,9 +312,9 @@ fetch("https://anikototvapi.vercel.app/api")
     <section class="stats">
       <div class="container">
         <div class="stats-grid">
-          <div class="reveal"><div class="stat-value" data-count="40">0</div><div class="stat-label">API Endpoints</div></div>
+          <div class="reveal"><div class="stat-value" data-count="42">0</div><div class="stat-label">API Endpoints</div></div>
           <div class="reveal reveal-delay-1"><div class="stat-value" data-count="0">0</div><div class="stat-label">API Keys Required</div></div>
-          <div class="reveal reveal-delay-2"><div class="stat-value" data-count="40">0</div><div class="stat-label">Anime Genres</div></div>
+          <div class="reveal reveal-delay-2"><div class="stat-value" data-count="43">0</div><div class="stat-label">Anime Genres</div></div>
           <div class="reveal reveal-delay-3"><div class="stat-value">Live</div><div class="stat-label">Real-time Data</div></div>
         </div>
       </div>
@@ -373,6 +374,21 @@ fetch("https://anikototvapi.vercel.app/api")
             <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div>
             <div class="feature-title">Fast & Cached</div>
             <div class="feature-desc">In-memory cache with configurable TTL for snappy responses and reduced scraping overhead.</div>
+          </div>
+          <div class="feature-card reveal">
+            <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></div>
+            <div class="feature-title">AniList Enrichment</div>
+            <div class="feature-desc">Synopsis, scores, studios, characters and seasonal charts from AniList's GraphQL API — no scraping, Cloudflare-proof.</div>
+          </div>
+          <div class="feature-card reveal reveal-delay-1">
+            <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg></div>
+            <div class="feature-title">CORS-free Streaming</div>
+            <div class="feature-desc">M3U8 playlists rewritten through the built-in proxy, with segments streamed server-side for direct playback.</div>
+          </div>
+          <div class="feature-card reveal reveal-delay-2">
+            <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg></div>
+            <div class="feature-title">Embed Providers</div>
+            <div class="feature-desc">Iframe-ready Megavid, AniXo and MegaPlay player URLs for an episode — bypasses origin-site Cloudflare entirely.</div>
           </div>
         </div>
       </div>
@@ -490,6 +506,7 @@ fetch("https://anikototvapi.vercel.app/api")
             <a href="/api/random">Random</a>
             <a href="/api/schedule">Schedule</a>
             <a href="/api/top-ten">Top 10</a>
+            <a href="/api/anilist/21">AniList</a>
           </div>
           <div class="footer-col">
             <h4>Resources</h4>
@@ -523,7 +540,8 @@ fetch("https://anikototvapi.vercel.app/api")
       search: { url: '/search?keyword=naruto', label: 'Search' },
       stream: { url: '/stream?id=naruto-ep-1', label: 'Stream' },
       random: { url: '/random', label: 'Random' },
-      schedule: { url: '/schedule', label: 'Schedule' }
+      schedule: { url: '/schedule', label: 'Schedule' },
+      anilist: { url: '/anilist/21', label: 'AniList' }
     };
 
     function setEndpoint(key, event) {
@@ -589,9 +607,13 @@ fetch("https://anikototvapi.vercel.app/api")
       { id: 'home', title: 'Home Info', desc: 'Spotlight, trending, popular, top-airing, genres, and more.', path: '/', params: [], code: { curl: 'curl https://anikototvapi.vercel.app/api', js: 'const res = await fetch("https://anikototvapi.vercel.app/api");\nconst data = await res.json();\nconsole.log(data.trending);', python: 'import requests\nr = requests.get("https://anikototvapi.vercel.app/api")\nprint(r.json()["trending"])' } },
       { id: 'search', title: 'Search', desc: 'Search anime by keyword with pagination.', path: '/search?keyword={q}&page={n}', params: [{ name: 'keyword', type: 'string', desc: 'Search query' }, { name: 'page', type: 'number', desc: 'Page (default 1)' }], code: { curl: 'curl "https://anikototvapi.vercel.app/api/search?keyword=naruto"', js: 'const res = await fetch("https://anikototvapi.vercel.app/api/search?keyword=naruto");\nconst data = await res.json();', python: 'import requests\nr = requests.get("https://anikototvapi.vercel.app/api/search", params={"keyword": "naruto"})\nprint(r.json())' } },
       { id: 'info', title: 'Anime Info', desc: 'Detailed info: synopsis, genres, relations, recommendations.', path: '/info?id={slug}', params: [{ name: 'id', type: 'string', desc: 'Anime slug' }], code: { curl: 'curl "https://anikototvapi.vercel.app/api/info?id=naruto"', js: 'const res = await fetch("https://anikototvapi.vercel.app/api/info?id=naruto");\nconst data = await res.json();', python: 'import requests\nr = requests.get("https://anikototvapi.vercel.app/api/info", params={"id": "naruto"})\nprint(r.json())' } },
+      { id: 'anilist', title: 'AniList Info', desc: 'AniList metadata: scores, studios, characters, relations.', path: '/anilist/{id}', params: [{ name: 'id', type: 'number', desc: 'AniList ID — or use ?mal={malId}' }], code: { curl: 'curl "https://anikototvapi.vercel.app/api/anilist/21"', js: 'const res = await fetch("https://anikototvapi.vercel.app/api/anilist/21");\nconst data = await res.json();', python: 'import requests\nr = requests.get("https://anikototvapi.vercel.app/api/anilist/21")\nprint(r.json())' } },
+      { id: 'season', title: 'Seasonal Chart', desc: 'AniList seasonal chart (defaults to the current season).', path: '/anilist/season?season={SEASON}&year={YYYY}', params: [{ name: 'season', type: 'string', desc: 'WINTER, SPRING, SUMMER or FALL' }, { name: 'year', type: 'number', desc: 'Year (default current)' }], code: { curl: 'curl "https://anikototvapi.vercel.app/api/anilist/season?season=WINTER&year=2026"', js: 'const res = await fetch("https://anikototvapi.vercel.app/api/anilist/season?season=WINTER&year=2026");\nconst data = await res.json();', python: 'import requests\nr = requests.get("https://anikototvapi.vercel.app/api/anilist/season", params={"season": "WINTER", "year": 2026})\nprint(r.json())' } },
       { id: 'episodes', title: 'Episodes', desc: 'Episode list loaded via AJAX.', path: '/episodes/{animeId}', params: [{ name: 'animeId', type: 'number', desc: 'Anime ID' }], code: { curl: 'curl "https://anikototvapi.vercel.app/api/episodes/958"', js: 'const res = await fetch("https://anikototvapi.vercel.app/api/episodes/958");\nconst data = await res.json();', python: 'import requests\nr = requests.get("https://anikototvapi.vercel.app/api/episodes/958")\nprint(r.json())' } },
       { id: 'stream', title: 'Stream Servers', desc: 'Streaming servers for an episode.', path: '/stream?id={linkId}', params: [{ name: 'id', type: 'string', desc: 'Link ID from servers' }], code: { curl: 'curl "https://anikototvapi.vercel.app/api/stream?id=MTF1d..."', js: 'const res = await fetch("https://anikototvapi.vercel.app/api/stream?id=MTF1d...");\nconst data = await res.json();', python: 'import requests\nr = requests.get("https://anikototvapi.vercel.app/api/stream", params={"id": "MTF1d..."})\nprint(r.json())' } },
       { id: 'servers', title: 'Servers', desc: 'Resolve streaming server links.', path: '/servers?ids={serverIds}', params: [{ name: 'ids', type: 'string', desc: 'Server IDs from episodes' }], code: { curl: 'curl "https://anikototvapi.vercel.app/api/servers?ids=SlNVT..."', js: 'const res = await fetch("https://anikototvapi.vercel.app/api/servers?ids=SlNVT...");\nconst data = await res.json();', python: 'import requests\nr = requests.get("https://anikototvapi.vercel.app/api/servers", params={"ids": "SlNVT..."})\nprint(r.json())' } },
+      { id: 'watch', title: 'Watch Page', desc: 'Servers, trending sidebar and recommendations in one call.', path: '/watch?slug={slug}&ep={n}', params: [{ name: 'slug', type: 'string', desc: 'Anime slug' }, { name: 'ep', type: 'number', desc: 'Episode number' }], code: { curl: 'curl "https://anikototvapi.vercel.app/api/watch?slug=one-piece-odmau&ep=1"', js: 'const res = await fetch("https://anikototvapi.vercel.app/api/watch?slug=one-piece-odmau&ep=1");\nconst data = await res.json();', python: 'import requests\nr = requests.get("https://anikototvapi.vercel.app/api/watch", params={"slug": "one-piece-odmau", "ep": 1})\nprint(r.json())' } },
+      { id: 'embeds', title: 'Embed Providers', desc: 'Iframe-ready Megavid, AniXo and MegaPlay players.', path: '/stream/embeds?slug={slug}&ep={n}', params: [{ name: 'slug', type: 'string', desc: 'Anime slug (or ?mal= / ?anilist=)' }, { name: 'ep', type: 'number', desc: 'Episode number' }, { name: 'lang', type: 'string', desc: 'sub or dub (optional)' }], code: { curl: 'curl "https://anikototvapi.vercel.app/api/stream/embeds?slug=one-piece-odmau&ep=1"', js: 'const res = await fetch("https://anikototvapi.vercel.app/api/stream/embeds?slug=one-piece-odmau&ep=1");\nconst data = await res.json();', python: 'import requests\nr = requests.get("https://anikototvapi.vercel.app/api/stream/embeds", params={"slug": "one-piece-odmau", "ep": 1})\nprint(r.json())' } },
       { id: 'schedule', title: 'Schedule', desc: 'Anime schedule for a specific date.', path: '/schedule?date={YYYY-MM-DD}', params: [{ name: 'date', type: 'string', desc: 'Date (default today)' }], code: { curl: 'curl "https://anikototvapi.vercel.app/api/schedule"', js: 'const res = await fetch("https://anikototvapi.vercel.app/api/schedule");\nconst data = await res.json();', python: 'import requests\nr = requests.get("https://anikototvapi.vercel.app/api/schedule")\nprint(r.json())' } },
       { id: 'topten', title: 'Top 10', desc: 'Top 10 anime (today, week, month).', path: '/top-ten', params: [], code: { curl: 'curl "https://anikototvapi.vercel.app/api/top-ten"', js: 'const res = await fetch("https://anikototvapi.vercel.app/api/top-ten");\nconst data = await res.json();', python: 'import requests\nr = requests.get("https://anikototvapi.vercel.app/api/top-ten")\nprint(r.json())' } },
       { id: 'random', title: 'Random', desc: 'Random anime info.', path: '/random', params: [], code: { curl: 'curl "https://anikototvapi.vercel.app/api/random"', js: 'const res = await fetch("https://anikototvapi.vercel.app/api/random");\nconst data = await res.json();', python: 'import requests\nr = requests.get("https://anikototvapi.vercel.app/api/random")\nprint(r.json())' } },

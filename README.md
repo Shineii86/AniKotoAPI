@@ -22,7 +22,7 @@
   <img src="https://img.shields.io/badge/Cheerio-1.0-3572A5?style=flat-square&logoColor=white" alt="Cheerio"/>
   <img src="https://img.shields.io/badge/Vercel-Serverless-000000?style=flat-square&logo=vercel&logoColor=white" alt="Vercel"/>
   <img src="https://img.shields.io/badge/License-MIT-22c55e?style=flat-square&logo=mit&logoColor=white" alt="License"/>
-  <img src="https://img.shields.io/badge/Version-2.6.0-f43f8e?style=flat-square&logoColor=white" alt="Version"/>
+  <img src="https://img.shields.io/badge/Version-2.6.1-f43f8e?style=flat-square&logoColor=white" alt="Version"/>
   <img src="https://img.shields.io/badge/Endpoints-42-6366f1?style=flat-square&logoColor=white" alt="Endpoints"/>
   <img src="https://img.shields.io/badge/Anime-10000+-a855f7?style=flat-square&logoColor=white" alt="Anime Database"/>
   <img src="https://img.shields.io/badge/Maintenance-Active-22c55e?style=flat-square&logo=github&logoColor=white" alt="Maintenance"/>
@@ -2453,7 +2453,8 @@ CMD ["node", "server.js"]
 
 | Version | Date | Key Changes |
 |:---|:---|:---|
-| **2.6.0** | 2026-10-24 | Full diagnostic sweep + cross-repo comparison, modularised middleware/routes/OpenAPI, cache stampede guard, `?refresh=1` + `X-Cache`, input validation, `trust proxy` rate-limit fix, AniList enrichment endpoints, stream resolver + proxy overhaul (48 tests) |
+| **2.6.1** | 2026-10-24 | Stream resolver rebuilt on `getSources` + AES decrypt, proxy full-rewrite/streaming upgrade, live CDN allowlist, 48 tests |
+| **2.6.0** | 2026-10-24 | Full diagnostic sweep + cross-repo comparison, modularised middleware/routes/OpenAPI, cache stampede guard, `?refresh=1` + `X-Cache`, input validation, `trust proxy` rate-limit fix, AniList enrichment endpoints |
 | **2.5.1** | 2026-10-13 | Domain sync vs official hub, spotlight carousel fix, direct embed providers (`/api/stream/embeds`), info `externalIds` + latest-episode checker, full docs pass, diagnostic sweep, Dockerfile Node 22 |
 | **2.4.1** | 2026-08-27 | Security: fixed SSRF in stream proxies, dotenv load order fix, SECURITY.md |
 | **2.2.0** | 2026-07-28 | Streaming resolver, M3U8/TS proxy, 5 new endpoints, bug fixes, full diagnostic sweep |
