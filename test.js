@@ -80,6 +80,16 @@ const tests = [
   { name: "Watch Order", url: "/watch-order/one-piece-odmau", check: (d) => d.results?.related || d.results?.totalRelated, optional: true },
   { name: "Download", url: "/download?slug=one-piece-odmau&ep=1", check: (d) => d.results, optional: true },
 
+  // Enrichment (AniList)
+  { name: "AniList Anime", url: "/anilist/21", check: (d) => d.results?.id === 21 && Array.isArray(d.results?.genres) },
+  { name: "AniList (MAL alias)", url: "/anilist?mal=21", check: (d) => d.results?.idMal === 21 },
+  { name: "AniList Season", url: "/anilist/season?season=WINTER&year=2026", check: (d) => d.results?.season === "WINTER" && d.results?.media?.length > 0 },
+
+  // Input validation (must be rejected before any upstream request)
+  { name: "Invalid Slug Rejected", url: "/seasons/..%2F..%2Fetc", expectStatus: 400 },
+  { name: "Invalid Page Rejected", url: "/most-popular?page=abc", expectStatus: 400 },
+  { name: "Invalid Season Rejected", url: "/anilist/season?season=NOPE", expectStatus: 400 },
+
   // Utility endpoints
   { name: "Health", url: "/health", check: (d) => d.results?.status === "healthy" },
   { name: "Stats", url: "/stats", check: (d) => d.results?.endpoints },
@@ -101,7 +111,21 @@ async function runTest(test) {
   try {
     const res = await fetch(`${BASE}${test.url}`);
     const duration = Date.now() - start;
-    
+
+    // ---- FEATURE: Negative tests — assert an exact rejection status ----
+    if (test.expectStatus) {
+      if (res.status === test.expectStatus) {
+        console.log(`✅ ${test.name} (HTTP ${res.status}) (${duration}ms)`);
+        passed++;
+        results.push({ name: test.name, status: "PASS", duration });
+      } else {
+        console.log(`❌ ${test.name} - expected HTTP ${test.expectStatus}, got ${res.status} (${duration}ms)`);
+        failed++;
+        results.push({ name: test.name, status: "FAIL", reason: `Expected ${test.expectStatus}, got ${res.status}`, duration });
+      }
+      return;
+    }
+
     if (!res.ok) {
       if (test.optional && (res.status === 404 || res.status === 500)) {
         console.log(`⏭️  ${test.name} - Skipped (HTTP ${res.status}) (${duration}ms)`);

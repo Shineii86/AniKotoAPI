@@ -1,13 +1,13 @@
 # // === HEADER ===
-# AniKotoAPI v2.5.1
+# AniKotoAPI v2.6.0
 # Free REST API for Anime Data
 # Scraping anikototv.to with Cheerio
 
 ---
 
-![AniKotoAPI](https://img.shields.io/badge/AniKotoAPI-v2.5.1-blue)
+![AniKotoAPI](https://img.shields.io/badge/AniKotoAPI-v2.6.0-blue)
 ![License](https://img.shields.io/badge/License-MIT-green)
-![Endpoints](https://img.shields.io/badge/Endpoints-40+-orange)
+![Endpoints](https://img.shields.io/badge/Endpoints-42-orange)
 ![Node.js](https://img.shields.io/badge/Node.js-18+-brightgreen)
 
 > A fast, free REST API that scrapes anime data from **anikototv.to**.
@@ -70,7 +70,7 @@ That's it. No API keys required.
 
 | Feature | Description |
 |---|---|
-| **40+ Endpoints** | Full coverage of anime data, streaming, and discovery |
+| **42 Endpoints** | Full coverage of anime data, streaming, and discovery |
 | **29 HTML Scrapers** | Cheerio-based scrapers for robust data extraction |
 | **30 Route Handlers** | Organized controllers with clean separation of concerns |
 | **5 Mirror Domains** | Automatic failover across multiple source domains |
@@ -99,6 +99,13 @@ That's it. No API keys required.
 | GET | `/api/seasons/:id` | Season/episode details for an anime |
 | GET | `/api/watch-order/:id` | Canonical watch order for a series |
 
+### Enrichment (AniList)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/anilist/:id` | Rich metadata from AniList (by AniList or MAL ID) |
+| GET | `/api/anilist/season` | Seasonal chart — current season by default |
+
 ### Search
 
 | Method | Endpoint | Description |
@@ -113,6 +120,7 @@ That's it. No API keys required.
 |--------|----------|-------------|
 | GET | `/api/episodes/:id` | Episode list for an anime |
 | GET | `/api/episodes-ajax/:id` | Lazy-loaded episode pagination |
+| GET | `/api/episodes/latest` | Latest aired episode (bots) |
 
 ### Streaming
 
@@ -127,6 +135,7 @@ That's it. No API keys required.
 | GET | `/api/watch` | Watch page with stream data |
 | GET | `/api/download` | Download link for an episode |
 | GET | `/api/mapper-servers` | Server name mappings |
+| GET | `/api/stream/embeds` | Iframe-ready embed URLs (Megavid/AniXo/MegaPlay) |
 
 ### Discovery
 
@@ -189,29 +198,24 @@ That's it. No API keys required.
 
 ```
 AniKotoAPI/
-├── api/                    # Vercel serverless functions
-│   ├── index.js            # Home endpoint
-│   ├── info.js             # Anime info
-│   ├── search.js           # Search
-│   ├── stream.js           # Streaming
-│   └── ...                 # 40 route handlers
-├── scrapers/               # Cheerio HTML scrapers
-│   ├── home.js
-│   ├── info.js
-│   ├── search.js
-│   └── ...                 # 29 scrapers
-├── utils/                  # Shared utilities
-│   ├── cache.js            # LRU cache with TTL
-│   ├── rateLimit.js        # IP-based rate limiter
-│   ├── mirrors.js          # Mirror failover logic
-│   └── compress.js         # GZIP compression
+├── server.js               # Express entry point + middleware chain
+├── vercel.json             # Vercel routing (builds server.js)
+├── src/
+│   ├── configs/            # Headers, ID maps, embed providers, OpenAPI
+│   ├── controllers/        # 31 route handlers (one per endpoint)
+│   ├── extractors/         # 29 Cheerio HTML scrapers
+│   ├── helper/             # cache, mirrors, anilist, validation, response
+│   ├── middleware/         # requestId, cors, security, rateLimit, timeout…
+│   └── routes/             # apiRoutes orchestrator + 6 domain modules
 ├── docs/                   # Documentation
 │   ├── index.md            # This file
-│   ├── endpoints.md        # Full API reference
+│   ├── endpoints.md        # Full API reference (42 endpoints)
 │   ├── streaming.md        # Streaming workflow
 │   ├── examples.md         # Code examples
 │   ├── architecture.md     # Design patterns
-│   └── testing.md          # Test suite docs
+│   ├── testing.md          # Test suite docs
+│   └── diagnostic-sweep.md # Cross-repo audit report
+├── test.js                 # 46 integration tests
 ├── package.json
 └── vercel.json
 ```
@@ -219,7 +223,7 @@ AniKotoAPI/
 ### Key Design Patterns
 
 - **Scraping Layer**: 29 Cheerio-based scrapers parse HTML from anikototv.to, isolating page-specific logic from route handlers.
-- **Controller Layer**: 30 route handlers map HTTP requests to scraper calls, handle validation, and format responses.
+- **Controller Layer**: 31 route handlers map HTTP requests to scraper calls, handle validation, and format responses.
 - **Cache Layer**: LRU cache with per-endpoint TTL reduces redundant scraping. Hot endpoints cache for 2–5 minutes; cold endpoints for 10+ minutes.
 - **Mirror Layer**: 5 source domains with automatic failover. If one domain is slow or down, requests transparently fall back to the next mirror.
 - **Rate Limiter**: Token bucket algorithm, 100 requests per 15-minute window per client IP.
@@ -350,7 +354,8 @@ All errors return JSON with a consistent structure:
 
 | File | Description |
 |------|-------------|
-| [endpoints.md](./endpoints.md) | Full API reference for all 40+ endpoints |
+| [endpoints.md](./endpoints.md) | Full API reference for all 42 content endpoints |
+| [diagnostic-sweep.md](./diagnostic-sweep.md) | Full-repo + cross-repo audit behind v2.6.0 |
 | [streaming.md](./streaming.md) | Complete streaming workflow guide |
 | [examples.md](./examples.md) | Working code examples in cURL, JS, Python |
 | [architecture.md](./architecture.md) | Project structure and design patterns |
@@ -381,7 +386,7 @@ npm run dev
 
 - Follow existing code style and patterns
 - Add scrapers in `scrapers/` for new pages
-- Add route handlers in `api/` for new endpoints
+- Add a route in `src/routes/`, a handler in `src/controllers/`, and an extractor in `src/extractors/` for new endpoints
 - Update documentation when adding features
 - Test all changes before submitting
 

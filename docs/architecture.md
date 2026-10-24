@@ -1,7 +1,7 @@
 /**
  * ============================================================================
  *  AniKotoAPI — Architecture Document
- *  Version : 2.5.1
+ *  Version : 2.6.0
  *  Generated: 2026-10-13
  * ============================================================================
  *
@@ -61,13 +61,14 @@
  *  │  │                                                               │  │
  *  │  │  ┌──────────────────────────────────────────────────────────┐ │  │
  *  │  │  │                   ROUTING LAYER                          │ │  │
- *  │  │  │  src/routes/apiRoutes.js                                 │ │  │
+ *  │  │  │    src/routes/apiRoutes.js  (orchestrator)               │ │  │
+ *  │  │  │    content · stream · discovery · enrichment · system    │ │  │
  *  │  │  │  src/routes/category.route.js                            │ │  │
  *  │  │  └──────────────────────┬───────────────────────────────────┘ │  │
  *  │  │                         │                                     │  │
  *  │  │                         ▼                                     │  │
  *  │  │  ┌──────────────────────────────────────────────────────────┐ │  │
- *  │  │  │               CONTROLLER LAYER  (30 controllers)         │ │  │
+ *  │  │  │                CONTROLLER LAYER  (31 controllers)        │ │  │
  *  │  │  │  Validation · Parameter parsing · Response formatting    │ │  │
  *  │  │  └──────────────────────┬───────────────────────────────────┘ │  │
  *  │  │                         │                                     │  │
@@ -175,14 +176,12 @@
  * AniKotoAPI/
  * ├── server.js                      # Express entry point, middleware chain
  * ├── package.json                   # Dependencies & npm scripts
- * ├── api/
- * │   └── index.js                   # Vercel serverless function handler
  * ├── src/
  * │   ├── configs/
  * │   │   ├── header.config.js       # Default HTTP headers for upstream requests
  * │   │   ├── ids.config.js          # Genre / Type / Status numeric ID mappings
  * │   │   └── embedProviders.config.js # Direct embed provider registry (Megavid/AniXo/MegaPlay)
- * │   ├── controllers/               # 30 route handlers (one per endpoint)
+ * │   ├── controllers/               # 31 route handlers (one per endpoint)
  * │   │   ├── homeInfo.controller.js
  * │   │   ├── animeInfo.controller.js
  * │   │   ├── search.controller.js
@@ -192,6 +191,7 @@
  * │   │   ├── streamInfo.controller.js
  * │   │   ├── streamResolver.controller.js
  * │   │   ├── embedProviders.controller.js
+ * │   │   ├── anilist.controller.js
  * │   │   ├── schedule.controller.js
  * │   │   ├── spotlight.controller.js
  * │   │   ├── trending.controller.js
@@ -243,13 +243,28 @@
  *   │   │   ├── recentlyUpdatedTabs.extractor.js
  *   │   │   ├── completedAnime.extractor.js
  *   │   │   └── parseListItem.helper.js
- *   │   ├── helper/
- *   │   │   ├── cache.helper.js      # LRU cache with per-endpoint TTL
+ *   │   ├── helper/                    # 12 utility modules
+ *   │   │   ├── cache.helper.js      # LRU cache + ?refresh bypass scope
  *   │   │   ├── mirror.helper.js     # Multi-mirror failover (5 domains)
- *   │   │   ├── pagination.helper.js # Pagination builder
- *   │   │   └── parseListItem.helper.js
- *   │   └── routes/
- *   │       ├── apiRoutes.js         # All route definitions + OpenAPI spec
+ *   │   │   ├── anilist.helper.js    # Cached AniList GraphQL client
+ *   │   │   ├── response.helper.js   # success/error JSON envelopes
+ *   │   │   ├── validation.helper.js # slug/letter/page validators
+ *   │   │   └── pagination.helper.js # Pagination builder
+ *   │   ├── middleware/                 # Express middleware (7 modules)
+ *   │   │   ├── requestId.middleware.js
+ *   │   │   ├── cors.middleware.js
+ *   │   │   ├── securityHeaders.middleware.js
+ *   │   │   ├── rateLimit.middleware.js
+ *   │   │   ├── timeout.middleware.js
+ *   │   │   ├── validation.middleware.js
+ *   │   │   └── creatorInfo.js
+ *   │   └── routes/                    # Split by domain (7 modules)
+ *   │       ├── apiRoutes.js         # Orchestrator: counter + validation
+ *   │       ├── content.routes.js    # Home/info/search/episodes/schedule
+ *   │       ├── stream.routes.js     # Watch/servers/stream + SSRF proxies
+ *   │       ├── discovery.routes.js  # Spotlight/trending/rankings/lists
+ *   │       ├── enrichment.routes.js # AniList metadata + seasonal chart
+ *   │       ├── system.routes.js     # Health/stats/mirrors/OpenAPI
  *   │       └── category.route.js    # Genre / Type / Status sub-routes
  *   ├── docs/                        # Documentation (you are here)
  *   │   ├── index.md
@@ -257,7 +272,8 @@
  *   │   ├── streaming.md
  *   │   ├── examples.md
  *   │   ├── architecture.md
- *   │   └── testing.md
+ *   │   ├── testing.md
+ *   │   └── diagnostic-sweep.md    # Cross-repo audit report (v2.6.0)
  *   ├── public/                      # Static files served by Vercel
  *   │   ├── index.html
  *   │   ├── tos.html
@@ -272,7 +288,7 @@
  *   │   ├── performance-benchmarker.md
  *   │   ├── security-architect.md
  *   │   └── technical-writer.md
- *   └── test.js                      # Integration test suite (35 tests)
+ *   └── test.js                      # Integration test suite (46 tests)
  */
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -301,7 +317,7 @@
  * └────────────────────────────────────────────────────────────────────────┘
  *
  * ┌────────────────────────────────────────────────────────────────────────┐
- * │  Controllers  (30 handlers)                                           │
+ * │  Controllers  (31 handlers)                                           │
  * ├────────────────────────────────────────────────────────────────────────┤
  * │  One controller per API endpoint. Responsibilities:                   │
  * │  • Extract and validate request parameters (query, params, body)      │
@@ -363,10 +379,11 @@
  * ┌────────────────────────────────────────────────────────────────────────┐
  * │  Routes                                                               │
  * ├────────────────────────────────────────────────────────────────────────┤
- * │  apiRoutes.js                                                         │
- * │    • Defines all 40 endpoint paths with HTTP methods                 │
+ * │  routes/                                                               │
+ * │    • Defines all 42 endpoint paths with HTTP methods                 │
  * │    • Maps paths to controller functions                                │
- * │    • Embeds OpenAPI 3.0 spec for auto-documentation                  │
+ * │    • Delegates to 6 domain modules under the /api mount                │
+ * │    • Builds the OpenAPI spec from src/configs/openapi.config.js      │
  * │                                                                       │
  * │  category.route.js                                                    │
  * │    • Sub-router for /api/genre, /api/type, /api/status               │
@@ -648,7 +665,7 @@
  *      empty or malformed data.
  *    • Controllers detect missing required fields and return appropriate
  *      error messages rather than empty objects.
- *    • Monitoring via test.js integration suite (35 tests) catches
+ *    • Monitoring via test.js integration suite (46 tests) catches
  *      structural regressions.
  */
 
@@ -782,7 +799,7 @@
  *  │  INTEGRATION TESTS (test.js)                                         │
  *  ├──────────────────────────────────────────────────────────────────────┤
  *  │                                                                      │
- *  │  • 40 end-to-end tests covering all 40+ endpoints.                 │
+ *  │  • 46 end-to-end tests covering all 42 content endpoints.          │
  *  │  • Each test hits the live API and validates:                       │
  *  │    - HTTP status code (200, or expected error code)                 │
  *  │    - Response shape (success: true, data present)                   │
@@ -836,14 +853,16 @@
  *  │  VERSION HISTORY                                                     │
  *  ├──────────────────────────────────────────────────────────────────────┤
  *  │                                                                      │
- *  │  v2.5.1  (Current)                                                  │
- *  │    • 40 endpoints, 29 extractors, 30 controllers                    │
- *  │    • Cache TTLs per endpoint + 60min MAL/AniList ID cache           │
- *  │    • 5-mirror failover system                                       │
- *  │    • Vercel serverless deployment                                   │
- *  │    • Direct embed providers (Megavid/AniXo/MegaPlay)                │
- *  │    • 40 integration tests                                           │
- *  │    • OpenAPI 3.0 spec embedded in apiRoutes.js                      │
+ *  │  v2.6.0  (Current)                                                  │
+ *  │    • 42 content endpoints, 29 extractors, 31 controllers            │
+ *  │    • Modular middleware (requestId/cors/security/rateLimit/        │
+ *  │      timeout/validation) + per-domain route modules                 │
+ *  │    • In-flight upstream dedup (cache-stampede guard)                │
+ *  │    • ?refresh=1 cache bypass + X-Cache HIT/MISS/BYPASS header       │
+ *  │    • Input validation (slug/letter/page) with 400 rejection         │
+ *  │    • AniList enrichment endpoints + seasonal chart                  │
+ *  │    • OpenAPI 3.0 spec generated from src/configs/openapi.config.js  │
+ *  │    • 46 integration tests (44 passing, 2 upstream-optional)         │
  *  │                                                                      │
  *  └──────────────────────────────────────────────────────────────────────┘
  *
@@ -872,8 +891,9 @@
  *  │                             │  topAnimeRankings, recentlyUpdated,   │
  *  │                             │  completedAnime, upcomingAnime        │
  *  │  Meta                       │  seasons, watchOrder                  │
+ *  │  Enrichment (AniList)       │  anilist, anilist/season              │
  *  ├─────────────────────────────┼────────────────────────────────────────┤
- *  │  TOTAL                      │  40 endpoints                         │
+ *  │  TOTAL                      │  42 endpoints                         │
  *  └─────────────────────────────┴────────────────────────────────────────┘
  *
  *  ┌──────────────────────────────────────────────────────────────────────┐

@@ -22,8 +22,8 @@
   <img src="https://img.shields.io/badge/Cheerio-1.0-3572A5?style=flat-square&logoColor=white" alt="Cheerio"/>
   <img src="https://img.shields.io/badge/Vercel-Serverless-000000?style=flat-square&logo=vercel&logoColor=white" alt="Vercel"/>
   <img src="https://img.shields.io/badge/License-MIT-22c55e?style=flat-square&logo=mit&logoColor=white" alt="License"/>
-  <img src="https://img.shields.io/badge/Version-2.5.1-f43f8e?style=flat-square&logoColor=white" alt="Version"/>
-  <img src="https://img.shields.io/badge/Endpoints-40-6366f1?style=flat-square&logoColor=white" alt="Endpoints"/>
+  <img src="https://img.shields.io/badge/Version-2.6.0-f43f8e?style=flat-square&logoColor=white" alt="Version"/>
+  <img src="https://img.shields.io/badge/Endpoints-42-6366f1?style=flat-square&logoColor=white" alt="Endpoints"/>
   <img src="https://img.shields.io/badge/Anime-10000+-a855f7?style=flat-square&logoColor=white" alt="Anime Database"/>
   <img src="https://img.shields.io/badge/Maintenance-Active-22c55e?style=flat-square&logo=github&logoColor=white" alt="Maintenance"/>
 </p>
@@ -88,7 +88,7 @@
 
 ### Why AniKotoAPI?
 
-- 🎬 **40 Endpoints** — Complete coverage of anikototv.to data
+- 🎬 **42 Endpoints** — Complete coverage of anikototv.to data
 - 🔍 **Full-Text Search** — Search anime by keyword with suggestions
 - 📺 **Episode Lists** — AJAX-loaded episode data with server info
 - 🎯 **Smart Filtering** — Genre, type, status, rating, sort, season, year
@@ -166,7 +166,7 @@ FLARESOLVERR_URL=http://your-flaresolverr-host:8191
 ### ⚡ Core
 - **Real-time scraping** from anikototv.to
 - **Smart caching** with LRU and configurable TTL per endpoint
-- **40 RESTful endpoints** covering all data
+- **42 RESTful endpoints** covering all data
 - **Direct embed providers** (Megavid/AniXo/MegaPlay) — Cloudflare-free iframe playback
 - **AJAX episode loading** for accurate data
 - **Mapper API integration** for extra servers
@@ -218,7 +218,7 @@ FLARESOLVERR_URL=http://your-flaresolverr-host:8191
 
 | Feature | Description | Status |
 |:---|:---|:---:|
-| 🎬 40 API Endpoints | Complete coverage of anime data | ✅ |
+| 🎬 42 API Endpoints | Complete coverage of anime data | ✅ |
 | 🔍 Full-Text Search | Keyword search with pagination | ✅ |
 | 📺 Episode Lists | AJAX-loaded episode data | ✅ |
 | 🎯 Advanced Filtering | Genre, type, status, rating, sort, season | ✅ |
@@ -336,10 +336,11 @@ AniKotoAPI/
 │   │
 │   ├── 📂 docs/                          #    📚 API documentation
 │   │   ├── 📄 index.md                   #       Overview, quick start
-│   │   ├── 📄 endpoints.md               #       Full API reference (40 endpoints)
+│   │   ├── 📄 endpoints.md               #       Full API reference (42 endpoints)
 │   │   ├── 📄 streaming.md               #       Streaming flow guide + proxy
 │   │   ├── 📄 examples.md                #       Code examples (cURL, JS, Python)
 │   │   ├── 📄 architecture.md            #       Project structure, tech stack
+│   │   ├── 📄 diagnostic-sweep.md        #       🆕 Full-repo + cross-repo audit (v2.6.0)
 │   │   └── 📄 testing.md                 #       Integration test suite & benchmarks
 │   │
 │
@@ -350,7 +351,7 @@ AniKotoAPI/
 │   │   ├── 📄 ids.config.js              #       🏷️ Genre/Type/Status/Source/Season ID mappings
 │   │   └── 📄 embedProviders.config.js   # 🆕 Direct embed provider registry (Megavid/AniXo/MegaPlay)
 │   │
-│   ├── 📂 controllers/                   #    🎮 Route handlers (30 files)
+│   ├── 📂 controllers/                   #    🎮 Route handlers (31 files)
 │   │   ├── 📄 homeInfo.controller.js
 │   │   ├── 📄 animeInfo.controller.js
 │   │   ├── 📄 search.controller.js
@@ -360,6 +361,7 @@ AniKotoAPI/
 │   │   ├── 📄 streamInfo.controller.js
 │   │   ├── 📄 streamResolver.controller.js  # 🆕 Stream URL resolution + quality detection
 │   │   ├── 📄 embedProviders.controller.js  # 🆕 Direct embed provider URLs
+│   │   ├── 📄 anilist.controller.js         # 🆕 AniList enrichment + seasonal chart
 │   │   ├── 📄 filter.controller.js
 │   │   ├── 📄 watchPage.controller.js
 │   │   └── 📄 ... (17 more)
@@ -385,13 +387,27 @@ AniKotoAPI/
 │   │   ├── 📄 formatTitle.helper.js      #       🔤 Title formatter
 │   │   ├── 📄 mirror.helper.js           #       🌐 Multi-mirror fallback (5 domains)
 │   │   ├── 📄 parseListItem.helper.js    #       📋 Shared list item parser
-│   │   └── 📄 pagination.helper.js       #       📊 Pagination metadata generator
+│   │   ├── 📄 pagination.helper.js       #       📊 Pagination metadata generator
+│   │   ├── 📄 anilist.helper.js          #       🆕 Cached AniList GraphQL client
+│   │   ├── 📄 response.helper.js         #       🆕 success/error JSON envelopes
+│   │   └── 📄 validation.helper.js       #       🆕 slug/letter/page validators
 │   │
-│   ├── 📂 middleware/                    #    🔧 Express middleware
-│   │   └── 📄 creatorInfo.js            #       ✍️ Creator attribution injection
+│   ├── 📂 middleware/                    #    🔧 Express middleware (7 modules)
+│   │   ├── 📄 creatorInfo.js            #       ✍️ Creator attribution injection
+│   │   ├── 📄 requestId.middleware.js   #       🆕 Per-request UUID + X-Request-Id
+│   │   ├── 📄 cors.middleware.js        #       🆕 Origin allowlist + preflight
+│   │   ├── 📄 securityHeaders.middleware.js #  🆕 CSP/HSTS/frame-options headers
+│   │   ├── 📄 rateLimit.middleware.js   #       🆕 Per-IP limiter (trust-proxy aware)
+│   │   ├── 📄 timeout.middleware.js     #       🆕 REQUEST_TIMEOUT guard
+│   │   └── 📄 validation.middleware.js  #       🆕 Path/query input guards
 │   │
-│   └── 📂 routes/                        #    🛤️ Express routes
-│       ├── 📄 apiRoutes.js               #       🌐 Main API routes (40 endpoints)
+│   └── 📂 routes/                        #    🛤️ Express routes (split by domain)
+│       ├── 📄 apiRoutes.js               #       🌐 Orchestrator: counter + validation
+│       ├── 📄 content.routes.js          #       🆕 Home/info/search/episodes/schedule
+│       ├── 📄 stream.routes.js           #       🆕 Watch/servers/stream + SSRF proxies
+│       ├── 📄 discovery.routes.js        #       🆕 Spotlight/trending/rankings/lists
+│       ├── 📄 enrichment.routes.js       #       🆕 AniList metadata + seasonal chart
+│       ├── 📄 system.routes.js           #       🆕 Health/stats/mirrors/OpenAPI
 │       └── 📄 category.route.js          #       🏷️ Category routes
 │
 ├── 📄 server.js                          # 🚀 Express server entry point
@@ -2174,6 +2190,92 @@ Binary video segment data with `Content-Type: video/mp2t` and `Access-Control-Al
 
 ---
 
+> ## 🌏 GET AniList Anime Info
+
+### Endpoint
+
+```bash
+/anilist/:id        /anilist?mal=21
+```
+
+#### Parameters
+
+| Param | Type | Required | Description |
+|:---|:---|:---|:---|
+| `:id` | number | One of* | AniList media ID (path) |
+| `mal` | string | One of* | MyAnimeList ID — resolved through a cached lookup |
+
+\* Provide either the path ID or `?mal=`.
+
+#### Example of request
+
+```bash
+curl "https://anikototvapi.vercel.app/api/anilist/21"
+curl "https://anikototvapi.vercel.app/api/anilist?mal=21"
+```
+
+> **New in v2.6.0** — returns synopsis, genres, scores, studios, characters,
+> relations and recommendations straight from AniList's public GraphQL API
+> (no scraping, unaffected by the origin site's Cloudflare challenges).
+
+```json
+{
+  "success": true,
+  "results": {
+    "id": 21,
+    "idMal": 21,
+    "title": { "romaji": "ONE PIECE" },
+    "description": "Gold Roger was known as the Pirate King...",
+    "genres": ["Action", "Adventure", "Comedy"],
+    "averageScore": 82,
+    "studios": { "nodes": [{ "name": "Toei Animation" }] }
+  }
+}
+```
+
+---
+
+> ## 📆 GET AniList Seasonal Chart
+
+### Endpoint
+
+```bash
+/anilist/season
+```
+
+#### Parameters
+
+| Param | Type | Required | Description |
+|:---|:---|:---|:---|
+| `season` | string | No | `WINTER` \| `SPRING` \| `SUMMER` \| `FALL` (default: current) |
+| `year` | number | No | 1940–2100 (default: current year) |
+| `page` | number | No | 1–500 (default 1) |
+| `perPage` | number | No | 1–50 (default 25) |
+
+#### Example of request
+
+```bash
+curl "https://anikototvapi.vercel.app/api/anilist/season?season=WINTER&year=2026"
+```
+
+```json
+{
+  "success": true,
+  "results": {
+    "season": "WINTER",
+    "year": 2026,
+    "page": 1,
+    "perPage": 25,
+    "pageInfo": { "currentPage": 1, "hasNextPage": true, "total": 5000 },
+    "media": [
+      { "id": 172463, "idMal": 57658, "title": { "romaji": "Jujutsu Kaisen: Shimetsu Kaiyuu - Zenpen" }, "averageScore": 86 }
+    ]
+  }
+}
+```
+
+---
+
 ## 📋 API Response Schema
 
 ### Success Response
@@ -2351,6 +2453,7 @@ CMD ["node", "server.js"]
 
 | Version | Date | Key Changes |
 |:---|:---|:---|
+| **2.6.0** | 2026-10-24 | Full diagnostic sweep + cross-repo comparison, modularised middleware/routes/OpenAPI, cache stampede guard, `?refresh=1` + `X-Cache`, input validation, `trust proxy` rate-limit fix, AniList enrichment endpoints |
 | **2.5.1** | 2026-10-13 | Domain sync vs official hub, spotlight carousel fix, direct embed providers (`/api/stream/embeds`), info `externalIds` + latest-episode checker, full docs pass, diagnostic sweep, Dockerfile Node 22 |
 | **2.4.1** | 2026-08-27 | Security: fixed SSRF in stream proxies, dotenv load order fix, SECURITY.md |
 | **2.2.0** | 2026-07-28 | Streaming resolver, M3U8/TS proxy, 5 new endpoints, bug fixes, full diagnostic sweep |
@@ -2465,7 +2568,7 @@ The API can access 10,000+ anime titles from anikototv.to. The most-popular endp
 
 ### ✅ Completed
 
-- [x] 🎬 40 API endpoints covering all data
+- [x] 🎬 42 API endpoints covering all data
 - [x] 🔍 Full-text search with pagination
 - [x] 📺 Episode lists via AJAX loading
 - [x] 🎯 Advanced filtering (genre, type, status, rating, sort, season, year)

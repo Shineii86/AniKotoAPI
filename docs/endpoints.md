@@ -924,6 +924,75 @@ Returns resolved IDs plus iframe-ready URLs per provider:
 
 ---
 
+## GET /anilist/:id
+
+AniList enrichment — rich metadata for one anime from AniList's public GraphQL API. Accepts an AniList ID in the path, or a MAL ID via `?mal=` (resolved through a 60-minute cached lookup).
+
+| Param | Type | Required | Description |
+|-------|------|----------|-------------|
+| `:id` | number | One of* | AniList media ID |
+| `mal` | string | One of* | MyAnimeList ID (works with `/anilist?mal=21`) |
+
+\* Provide either the path ID or `?mal=`.
+
+```bash
+curl "https://anikototvapi.vercel.app/api/anilist/21"
+curl "https://anikototvapi.vercel.app/api/anilist?mal=21"
+```
+
+Returns `title`, `description`, `genres`, `averageScore`, `studios`,
+`characters`, `relations` and `recommendations` (plus `nextAiringEpisode`
+when the show is airing). Media that does not exist returns `404`; an AniList
+outage returns `502` so clients know to retry.
+
+```json
+{
+  "success": true,
+  "results": {
+    "id": 21,
+    "idMal": 21,
+    "format": "TV",
+    "status": "RELEASING",
+    "genres": ["Action", "Adventure", "Comedy"],
+    "recommendations": { "nodes": [ ... ] },
+    "relations": { "edges": [ ... ] }
+  }
+}
+```
+
+---
+
+## GET /anilist/season
+
+Seasonal chart — the most popular anime of a season, defaults to the current season/year. Cached for 30 minutes per season/page.
+
+| Param | Type | Required | Description |
+|-------|------|----------|-------------|
+| `season` | string | No | `WINTER`, `SPRING`, `SUMMER`, `FALL` (default: current) |
+| `year` | number | No | 1940–2100 (default: current year) |
+| `page` | number | No | 1–500 (default 1) |
+| `perPage` | number | No | 1–50 (default 25) |
+
+```bash
+curl "https://anikototvapi.vercel.app/api/anilist/season?season=WINTER&year=2026"
+```
+
+```json
+{
+  "success": true,
+  "results": {
+    "season": "WINTER",
+    "year": 2026,
+    "page": 1,
+    "perPage": 25,
+    "pageInfo": { "currentPage": 1, "hasNextPage": true, "total": 5000 },
+    "media": [ { "id": 172463, "title": { "romaji": "..." }, "averageScore": 86 } ]
+  }
+}
+```
+
+---
+
 ## GET /stream/proxy
 
 M3U8 playlist proxy — rewrites relative URLs to proxy endpoints for CORS-free playback.
@@ -973,7 +1042,7 @@ curl "https://anikototvapi.vercel.app/api/health"
   "success": true,
   "results": {
     "status": "healthy",
-    "version": "2.5.1",
+    "version": "2.6.0",
     "uptime": "0h 1m 21s",
     "uptimeSeconds": 81,
     "timestamp": "2026-07-30T02:20:46.153Z",

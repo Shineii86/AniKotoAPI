@@ -18,58 +18,16 @@
  * ======= • ======= • ======= • ======= • =======• =======
  */
 
-import axios from "axios";
 import { EMBED_PROVIDERS } from "../configs/embedProviders.config.js";
 import { extractEpisodeList } from "./episodeList.extractor.js";
 import { getCache, setCache, TTL } from "../helper/cache.helper.js";
+// NOTE: The MAL→AniList lookup lives in the shared AniList client so the
+// /api/anilist/* endpoints and the embed builders reuse one cached transport
+import { resolveAnilistIdFromMal } from "../helper/anilist.helper.js";
 
 // ══════════════════════════════════════════════════════════════
 // ANILIST LOOKUP
 // ══════════════════════════════════════════════════════════════
-
-const ANILIST_GRAPHQL = "https://graphql.anilist.co";
-const ANILIST_QUERY = `query ($idMal: Int!) { Media(idMal: $idMal, type: ANIME) { id idMal } }`;
-
-// ---- FEATURE: MAL ID → AniList ID lookup (cached) ----
-/**
- * Resolves an AniList media ID from a MAL ID via the public GraphQL API.
- * Results are cached for TTL.ids (60min) — IDs never change per anime.
- *
- * @param {string|number} malId - MyAnimeList ID
- * @returns {Promise<string|null>} AniList ID or null on failure
- *
- * @example
- *   await resolveAnilistIdFromMal(21); // "30019" (One Piece)
- */
-const resolveAnilistIdFromMal = async (malId) => {
-  // NOTE: Cache-first — AniList IDs never change per MAL ID, so a hit here
-  // avoids a GraphQL round-trip on every embed request (TTL.ids = 60min)
-  const cacheKey = `anilist_from_mal_${malId}`;
-  const cached = getCache(cacheKey);
-  if (cached) return cached;
-
-  try {
-    const { data } = await axios.post(
-      ANILIST_GRAPHQL,
-      { query: ANILIST_QUERY, variables: { idMal: parseInt(malId, 10) } },
-      {
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
-        timeout: 10000,
-      }
-    );
-    // NOTE: Response nests under data.data.Media — axios already unwraps
-    // the HTTP body once, so one more .data access reaches the GraphQL envelope
-    const anilistId = data?.data?.Media?.id || null;
-    // NOTE: Only cache successes — transient AniList failures must not
-    // poison the cache for an hour
-    if (anilistId) setCache(cacheKey, anilistId, TTL.ids);
-    return anilistId;
-  } catch {
-    // TIP: Never throw here — a missing AniList ID only disables AniXo,
-    // MegaPlay/Megavid can still build URLs from the MAL ID alone
-    return null;
-  }
-};
 
 // ══════════════════════════════════════════════════════════════
 // EXTERNAL ID RESOLUTION

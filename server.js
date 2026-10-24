@@ -4,9 +4,13 @@
  * Repository: https://github.com/Shineii86/AniKotoAPI
  *
  * @description
- *   Main entry point for the AniKotoAPI Express server.
- *   Configures CORS, middleware, static files, API routes,
- *   and 404 handling. Starts the server on the configured port.
+ *   Main entry point for the AniKotoAPI Express server. Wires the middleware
+ *   stack (compression, request IDs, CORS, security headers, cache scope,
+ *   rate limiting, attribution, timeout), mounts the route modules and starts
+ *   the server on the configured port.
+ *
+ *   Middleware lives in src/middleware/* and route groups in src/routes/* —
+ *   this file is only the composition root.
  *
  * @exports
  *   None (side-effect: starts Express server)
@@ -27,11 +31,16 @@ import express from "express";
 import compression from "compression";
 import path from "path";
 import fs from "fs";
-import crypto from "crypto";
-import { fileURLToPath } from "url";
-import { dirname } from "path";
+
 import { createApiRoutes } from "./src/routes/apiRoutes.js";
 import { addCreatorInfo } from "./src/middleware/creatorInfo.js";
+import { assignRequestId } from "./src/middleware/requestId.middleware.js";
+import { createCorsMiddleware } from "./src/middleware/cors.middleware.js";
+import { addSecurityHeaders } from "./src/middleware/securityHeaders.middleware.js";
+import { createRateLimiter } from "./src/middleware/rateLimit.middleware.js";
+import { requestTimeout } from "./src/middleware/timeout.middleware.js";
+import { runWithCacheScope } from "./src/helper/cache.helper.js";
+import { jsonResponse, jsonError } from "./src/helper/response.helper.js";
 
 // ══════════════════════════════════════════════════════════════
 // SERVER CONFIGURATION
@@ -39,10 +48,23 @@ import { addCreatorInfo } from "./src/middleware/creatorInfo.js";
 
 const app = express();
 const PORT = process.env.PORT || 4444;
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
 const publicDir = path.join(process.cwd(), "public");
 const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(",");
+
+// ---- FEATURE: Reverse-proxy trust (needed for correct per-client IPs) ----
+// NOTE: Render/Vercel/nginx put the real client IP in X-Forwarded-For. Without
+// this setting Express sees only the proxy's address, so every visitor would
+// share a single rate-limit bucket. TRUST_PROXY=false disables it for
+// directly-exposed deployments (where a client could otherwise spoof XFF).
+const parseTrustProxy = (raw) => {
+  if (raw === undefined || raw === "") return 1;
+  const value = String(raw).trim().toLowerCase();
+  if (["false", "0", "no", "off"].includes(value)) return false;
+  if (["true", "yes", "on"].includes(value)) return true;
+  const asNumber = Number(value);
+  return Number.isNaN(asNumber) ? value : asNumber;
+};
+app.set("trust proxy", parseTrustProxy(process.env.TRUST_PROXY));
 
 // ---- FEATURE: Response compression ----
 app.use(compression({
@@ -59,45 +81,25 @@ app.use(express.json({ limit: "10kb" }));
 app.use(express.urlencoded({ extended: false, limit: "10kb" }));
 
 // ══════════════════════════════════════════════════════════════
-// REQUEST ID TRACKING
+// CORE MIDDLEWARE
 // ══════════════════════════════════════════════════════════════
 
 // ---- FEATURE: Unique request ID for debugging ----
-app.use((req, res, next) => {
-  req.id = crypto.randomUUID();
-  res.setHeader("X-Request-Id", req.id);
-  next();
-});
+app.use(assignRequestId);
 
-// ══════════════════════════════════════════════════════════════
-// CORS MIDDLEWARE
-// ══════════════════════════════════════════════════════════════
-
-// NOTE: Single unified CORS middleware — handles all origin validation
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  if (!allowedOrigins || allowedOrigins.includes("*") || (origin && allowedOrigins.includes(origin))) {
-    res.setHeader("Access-Control-Allow-Origin", origin || "*");
-  }
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, X-Requested-With");
-  if (req.method === "OPTIONS") {
-    return res.status(204).end();
-  }
-  next();
-});
+// ---- FEATURE: CORS (origin allowlist + preflight) ----
+app.use(createCorsMiddleware(allowedOrigins));
 
 // ---- FEATURE: Security headers ----
+app.use(addSecurityHeaders);
+
+// ---- FEATURE: Request cache scope (?refresh=1 bypasses the cache) ----
+// NOTE: The scope is AsyncLocalStorage-backed, so every getCache() call made
+// while handling this request can honour the bypass without the controller
+// having to receive `req`. It also carries `res` for the X-Cache header.
 app.use((req, res, next) => {
-  res.setHeader("X-Frame-Options", "DENY");
-  res.setHeader("X-Content-Type-Options", "nosniff");
-  res.setHeader("X-XSS-Protection", "1; mode=block");
-  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
-  res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
-  res.setHeader("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self'");
-  res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
-  res.setHeader("X-Permitted-Cross-Domain-Policies", "none");
-  next();
+  const refresh = req.query?.refresh;
+  runWithCacheScope({ bypass: refresh === "1" || refresh === "true", res }, next);
 });
 
 // ══════════════════════════════════════════════════════════════
@@ -121,88 +123,21 @@ app.get("/privacy", (req, res) => {
 });
 
 // ══════════════════════════════════════════════════════════════
-// RESPONSE HELPERS
-// ══════════════════════════════════════════════════════════════
-
-// ---- FEATURE: Standardized JSON response wrapper ----
-/**
- * Wraps data in a standardized success JSON response.
- *
- * @param {object} res - Express response object
- * @param {*} data - The data to return in the response
- * @param {number} status - HTTP status code (default: 200)
- */
-const jsonResponse = (res, data, status = 200) =>
-  res.status(status).json({ success: true, results: data });
-
-// ---- FEATURE: Standardized error response wrapper ----
-/**
- * Returns a standardized error JSON response.
- *
- * @param {object} res - Express response object
- * @param {string} message - Error message to return (default: "Internal server error")
- * @param {number} status - HTTP status code (default: 500)
- */
-const jsonError = (res, message = "Internal server error", status = 500) =>
-  res.status(status).json({ success: false, message });
-
-// ══════════════════════════════════════════════════════════════
-// API ROUTES
+// API MIDDLEWARE
 // ══════════════════════════════════════════════════════════════
 
 // ---- FEATURE: Rate limiting (configurable, default 100 requests per minute per IP) ----
-const requestCounts = new Map();
-const RATE_LIMIT = parseInt(process.env.RATE_LIMIT) || 100;
-const RATE_WINDOW = parseInt(process.env.RATE_WINDOW) || 60000;
-
-// ---- FEATURE: Rate limiter cleanup interval (every 5 minutes) ----
-const RATE_CLEANUP_INTERVAL = 300000;
-setInterval(() => {
-  const now = Date.now();
-  for (const [ip, timestamps] of requestCounts.entries()) {
-    const validTimestamps = timestamps.filter(t => now - t < RATE_WINDOW);
-    if (validTimestamps.length === 0) {
-      requestCounts.delete(ip);
-    } else {
-      requestCounts.set(ip, validTimestamps);
-    }
-  }
-}, RATE_CLEANUP_INTERVAL);
-
-app.use((req, res, next) => {
-  const ip = req.ip || req.connection.remoteAddress;
-  const now = Date.now();
-  if (!requestCounts.has(ip)) {
-    requestCounts.set(ip, []);
-  }
-  const timestamps = requestCounts.get(ip).filter(t => now - t < RATE_WINDOW);
-  requestCounts.set(ip, timestamps);
-  if (timestamps.length >= RATE_LIMIT) {
-    return res.status(429).json({
-      success: false,
-      message: "Rate limit exceeded. Try again later.",
-      retryAfter: Math.ceil((timestamps[0] + RATE_WINDOW - now) / 1000)
-    });
-  }
-  timestamps.push(now);
-  res.setHeader("X-RateLimit-Limit", RATE_LIMIT);
-  res.setHeader("X-RateLimit-Remaining", RATE_LIMIT - timestamps.length);
-  next();
-});
+app.use(createRateLimiter());
 
 // ---- FEATURE: Creator info middleware (injects attribution into all responses) ----
 app.use(addCreatorInfo);
 
 // ---- FEATURE: Request timeout middleware (30 seconds) ----
-app.use((req, res, next) => {
-  const timeout = parseInt(process.env.REQUEST_TIMEOUT) || 30000;
-  req.setTimeout(timeout, () => {
-    if (!res.headersSent) {
-      res.status(408).json({ success: false, message: "Request timeout" });
-    }
-  });
-  next();
-});
+app.use(requestTimeout);
+
+// ══════════════════════════════════════════════════════════════
+// API ROUTES
+// ══════════════════════════════════════════════════════════════
 
 createApiRoutes(app, jsonResponse, jsonError);
 
@@ -236,6 +171,7 @@ app.use((req, res) => {
         "/episodes/:id", "/episodes-ajax/:id", "/stream", "/servers",
         "/mapper-servers", "/download", "/stream/resolve",
         "/stream/qualities", "/stream/proxy", "/stream/ts-proxy",
+        "/stream/embeds", "/anilist/:id", "/anilist/season",
         "/spotlight", "/trending", "/top-ten", "/suggestions",
         "/random", "/most-popular", "/upcoming", "/top-rankings",
         "/recently-updated", "/completed", "/new-release",

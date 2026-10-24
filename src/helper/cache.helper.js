@@ -8,13 +8,59 @@
  *   Evicts least recently used entries when max size reached.
  *   Supports cache statistics and manual invalidation.
  *
+ *   Request-scoped cache control: a `?refresh=1` query parameter makes
+ *   every getCache() call inside that request skip the cache (AsyncLocalStorage
+ *   scope), and the first lookup of each request is reported on X-Cache.
+ *
  * @exports
- *   getCache, setCache, clearCache, getCacheStats, LRUCache
+ *   getCache, setCache, clearCache, getCacheStats, runWithCacheScope, LRUCache, TTL
  *
  * @author  Shinei Nouzen
  * @license MIT
  * ======= • ======= • ======= • ======= • =======• =======
  */
+
+import { AsyncLocalStorage } from "node:async_hooks";
+
+// ══════════════════════════════════════════════════════════════
+// REQUEST-SCOPED CACHE CONTROL
+// ══════════════════════════════════════════════════════════════
+
+// ---- FEATURE: Cache scope carried through the async request context ----
+// NOTE: The scope lets server.js honour `?refresh=1` for every endpoint
+// without threading `req` through 30+ controllers. Context propagates across
+// awaits, so a helper that runs inside the request sees the same store.
+const cacheScope = new AsyncLocalStorage();
+
+// NOTE: Counted for /api/cache/stats so operators can see refresh traffic
+let bypassCount = 0;
+
+// ---- FEATURE: Expose the scope to the HTTP layer ----
+/**
+ * Runs `fn` inside a cache scope. The store may carry:
+ *   - bypass {boolean} — true when the client sent ?refresh=1
+ *   - res {object}     — used to stamp the X-Cache response header
+ *
+ * @param {object} store - Scope payload
+ * @param {Function} fn - Continuation (usually Express `next`)
+ * @returns {*} Whatever fn returns
+ *
+ * @example
+ *   runWithCacheScope({ bypass: true, res }, next);
+ */
+const runWithCacheScope = (store, fn) => cacheScope.run(store, fn);
+
+/**
+ * Stamps X-Cache once per request — the first lookup is the endpoint's
+ * primary payload, later lookups are internal helper caches.
+ *
+ * @param {object|undefined} res - Express response from the scope
+ * @param {string} value - "HIT" | "MISS" | "BYPASS"
+ */
+const markCacheHeader = (res, value) => {
+  if (!res || res.headersSent || res.getHeader?.("X-Cache")) return;
+  res.setHeader("X-Cache", value);
+};
 
 // ══════════════════════════════════════════════════════════════
 // LRU CACHE CLASS
@@ -185,10 +231,23 @@ const cache = new LRUCache(
 // ---- FEATURE: Cache Get/Set/Clear ----
 /**
  * Get a value from the global cache.
+ * Skips the cache entirely (and reports BYPASS) when the current request
+ * carries ?refresh=1; otherwise reports HIT/MISS on X-Cache.
+ *
  * @param {string} key - Cache key
  * @returns {*} Cached value or undefined
  */
-const getCache = (key) => cache.get(key);
+const getCache = (key) => {
+  const store = cacheScope.getStore();
+  if (store?.bypass) {
+    bypassCount++;
+    markCacheHeader(store.res, "BYPASS");
+    return undefined;
+  }
+  const value = cache.get(key);
+  markCacheHeader(store?.res, value !== undefined ? "HIT" : "MISS");
+  return value;
+};
 
 /**
  * Set a value in the global cache with optional TTL.
@@ -205,10 +264,10 @@ const setCache = (key, data, ttl) => cache.set(key, data, ttl);
 const clearCache = () => cache.clear();
 
 /**
- * Get cache statistics (hits, misses, hit rate, size).
+ * Get cache statistics (hits, misses, hit rate, size, refresh bypasses).
  * @returns {Object} Cache stats
  */
-const getCacheStats = () => cache.getStats();
+const getCacheStats = () => ({ ...cache.getStats(), bypasses: bypassCount });
 
-export { getCache, setCache, clearCache, getCacheStats, LRUCache, TTL };
+export { getCache, setCache, clearCache, getCacheStats, runWithCacheScope, LRUCache, TTL };
 // ══════════════════════════════════════════════════════════════ END: cache.helper.js

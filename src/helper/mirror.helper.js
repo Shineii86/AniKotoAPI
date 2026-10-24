@@ -143,14 +143,46 @@ function buildUrl(path, baseUrl = workingMirror) {
   return `${base}${path}`;
 }
 
+// ---- FEATURE: In-flight upstream request registry ----
+const inflightFetches = new Map();
+
 // ---- FEATURE: Resilient Fetch with Mirror Fallback ----
 /**
- * Fetch with automatic mirror fallback and proxy support
+ * Fetch with automatic mirror fallback and proxy support.
+ *
+ * NOTE: Concurrent callers asking for the exact same upstream document share
+ * one in-flight request (thundering-herd / cache-stampede protection). A cold
+ * cache key hit by N simultaneous requests used to trigger N identical
+ * scrapes against the Cloudflare-protected origin; now the other N-1 wait on
+ * the first promise. Deduplication is limited to text responses — shared HTML
+ * is read-only, whereas JSON objects must not be handed to two callers.
+ *
  * @param {string} path - URL path to fetch
  * @param {object} options - Additional options
  * @returns {Promise<{data: string, mirror: string, proxy: string}>}
  */
 async function fetchWithMirror(path, options = {}) {
+  const returnType = options.returnType || "text";
+  if (returnType !== "text") return fetchFromMirrors(path, options);
+
+  const key = `${path}|${JSON.stringify(options.headers || {})}|${options.useProxy !== false}`;
+  const existing = inflightFetches.get(key);
+  if (existing) return existing;
+
+  const promise = fetchFromMirrors(path, options);
+  inflightFetches.set(key, promise);
+  // NOTE: The cleanup branch must never reject (it would surface as an
+  // unhandled rejection), and only removes its own entry — a newer fetch
+  // for the same key must not be evicted by a late-settling predecessor
+  promise
+    .catch(() => {})
+    .finally(() => {
+      if (inflightFetches.get(key) === promise) inflightFetches.delete(key);
+    });
+  return promise;
+}
+
+async function fetchFromMirrors(path, options = {}) {
   const { 
     timeout = 15000, 
     retries = 2,

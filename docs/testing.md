@@ -1,6 +1,6 @@
 # Testing
 
-Comprehensive integration test suite for AniKotoAPI — validates all 35 endpoints, streaming flow, error handling, and performance benchmarks.
+Comprehensive integration test suite for AniKotoAPI — validates all 42 content endpoints, streaming flow, error handling, and performance benchmarks.
 
 ## Quick Start
 
@@ -136,7 +136,7 @@ Marked with `optional: true`. Instead of failing, they print `⏭️ Skipped` wh
 ```
 📡 Detected local server — using localhost:4444
 
-🧪 Running 35 tests...
+🧪 Running 46 tests...
 
 📡 API: http://localhost:4444/api
 

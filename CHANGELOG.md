@@ -5,6 +5,45 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.6.0] - 2026-10-24
+
+### Added
+- **Diagnostic Sweep Report**: New `docs/diagnostic-sweep.md` — full-repo deep scan plus cross-repo comparison against Anivault-Scraper, Anivexa-API and anikoto-API (Teramoto): findings F1–F9, shipped-changes list and a P1–P3 roadmap
+- **AniList Enrichment**: New `GET /api/anilist/:id` (also `GET /api/anilist?mal=21`) returning synopsis, genres, scores, studios, characters, relations, recommendations and next-airing data from AniList's public GraphQL API (30min cache, 60min MAL→AniList ID cache) — no scraping, unaffected by the origin site's Cloudflare challenges; unknown IDs return **404** (`Anime not found on AniList`) instead of the previous 502, and an AniList outage returns 502 so clients know to retry
+- **Seasonal Chart**: New `GET /api/anilist/season?season=WINTER&year=2026&page=1&perPage=25` — defaults to the current season/year, 30min cache per season/page
+- **AniList Client**: New `src/helper/anilist.helper.js` — cached GraphQL client (`anilistQuery`, `resolveAnilistIdFromMal`, `getAnilistMedia`, `getAnilistSeason`) shared by `/stream/embeds`, `info` `externalIds` and the new endpoints (embed providers extractor now imports it instead of carrying its own Axios/GraphQL code)
+- **Middleware Modules**: New `src/middleware/` — `requestId.middleware.js` (per-request UUID + `X-Request-Id`), `cors.middleware.js` (`ALLOWED_ORIGINS` allowlist + preflight), `securityHeaders.middleware.js` (CSP/HSTS/frame-options), `rateLimit.middleware.js` (per-IP factory with `.unref()` sweep), `timeout.middleware.js` (`REQUEST_TIMEOUT` guard, default 30s), `validation.middleware.js` (path/query guards) — all extracted from `server.js`
+- **Shared Helpers**: New `src/helper/response.helper.js` (`jsonResponse`/`jsonError` envelopes) and `src/helper/validation.helper.js` (`validateSlug`, case-preserving `validateLetter`, `validatePage`, `validateQueryWord`)
+- **Route Split**: New `src/routes/` domain modules — `content.routes.js`, `stream.routes.js`, `discovery.routes.js`, `enrichment.routes.js`, `system.routes.js` — orchestrated by `apiRoutes.js` (request counter, `/api` mount, shared context); `server.js` rewritten as a composition root (middleware wiring, trust proxy, cache scope)
+- **OpenAPI Module**: New `src/configs/openapi.config.js` — spec builder moved out of `apiRoutes.js` (`buildOpenApiSpec` + `OPENAPI_PATH_COUNT`): 49 paths / 13 tags, reported by `/api/stats` as `openapiPaths`
+- **Tests**: 6 new cases in `test.js` — `AniList by ID`, `AniList by MAL`, `AniList Season` (positive) plus three `expectStatus: 400` negatives for page/slug/letter validation; suite now **46 tests** (44 passing, 2 upstream-optional skips)
+- **TRUST_PROXY**: New env var (`.env.example`) — `app.set("trust proxy", parseTrustProxy(...))` so rate limiting keys on the real client IP behind Render/Vercel/Cloudflare instead of the proxy's address
+
+### Changed
+- **Cache Stampede Guard**: `fetchWithMirror` dedupes concurrent identical upstream fetches through an in-flight `Map` (`inflightFetches`) — parallel requests for the same URL share one fetch and the promise self-removes on settle, so a cold cache no longer fans out into 5-mirror stampedes
+- **Cache Bypass**: `?refresh=1` bypasses the LRU for the entire request chain via an `AsyncLocalStorage` scope (`runWithCacheScope` in `cache.helper.js`), fresh results repopulate the cache, and every lookup is reported on the `X-Cache: HIT/MISS/BYPASS` response header; `/api/cache/stats` now includes `bypasses`
+- **Input Validation**: Global `?page=` guard (400 outside 1–500, mounted in `apiRoutes.js`), slug guard on `/info`, `/episodes`, `/watch`, `/download`, `/seasons`, `/watch-order`, `/search`, `/episodes-ajax` and letter guard on `/az-list/:letter` — malformed input is rejected with 400 before any mirror is touched; unknown query words capped at 256 chars
+- **Version**: Bumped to 2.6.0
+- **Docs Sync**: README, `docs/index.md`, `docs/architecture.md`, `docs/endpoints.md`, `docs/testing.md` and `public/index.html` synced to 42 content endpoints / 31 controllers / 29 extractors / 46 tests, with new project-tree entries for `src/middleware/` and the split `src/routes/`, new endpoint reference sections for `/anilist` and `/anilist/season`, and an Enrichment section in the endpoint overview tables
+
+### Example
+```
+GET /api/anilist/21
+GET /api/anilist?mal=21
+GET /api/anilist/season?season=WINTER&year=2026
+GET /api/search?keyword=naruto&page=2&refresh=1   # X-Cache: BYPASS
+```
+
+### Verified
+```
+node --check: all 93 JS files OK
+Local suite: 44 passed / 0 failed / 2 skipped (46 total)
+/api/anilist/21 → 200, /api/anilist?mal=21 → 200, /api/anilist/season → 200
+/api/anilist/999999999 → 404 Anime not found on AniList
+/api/openapi → 49 paths, /api/stats → openapiPaths: 49
+/api/health, /api/mirrors, /api/cache/stats → 200 with new fields
+```
+
 ## [2.5.1] - 2026-10-13
 
 ### Added
