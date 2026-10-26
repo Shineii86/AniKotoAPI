@@ -190,9 +190,9 @@ curl "https://anikototvapi.vercel.app/api/info?id=naruto-shippuuden-movie-6-road
     "animeId": 786,
     "title": "Naruto: Shippuuden Movie 6: Road to Ninja",
     "japaneseTitle": "Naruto: Shippuuden Movie 6 - Road to Ninja",
-    "altNames": "Naruto: Shippuuden Movie 6 - Road to Ninja;Naruto Movie 9",
+    "altNames": "Naruto: Shippuuden Movie 6 - Road to Ninja, Naruto Movie 9",
     "poster": "https://cdn.anipixcdn.co/thumbnail/43dd49b4fdb9bede653e94468ff8df1e.jpg",
-    "backgroundImage": "'",
+    "backgroundImage": "https://image.tmdb.org/t/p/original/...",
     "synopsis": "Returning home to Konohagakure, the young ninja celebrate defeating a group of supposed Akatsuki...",
     "type": "Movie",
     "premiered": "Summer 2012",
@@ -200,20 +200,24 @@ curl "https://anikototvapi.vercel.app/api/info?id=naruto-shippuuden-movie-6-road
     "status": "Finished Airing",
     "malScore": "7.84",
     "duration": "1 hr 39 min",
-    "episodes": "1",
+    "episodes": 1,
     "studios": ["Pierrot"],
     "producers": ["TV Tokyo", "Shueisha"],
     "genres": ["Action", "Comedy", "Supernatural"],
-    "rating": "PG-13",
+    "rating": "7.84",
     "reviewCount": "0",
     "externalIds": {
       "animeId": 1642,
-      "malId": "21",
-      "anilistId": "21"
+      "malId": 21,
+      "anilistId": 21
     }
   }
 }
 ```
+
+> **Note:** numeric identity fields (`animeId`, `malId`, `anilistId`) are
+> always numbers; `episodes` is a number or `null` when upstream does not
+> know the count. `altNames` is a de-duplicated, comma-separated string.
 
 ---
 
@@ -469,13 +473,19 @@ Returns `{ today: [...], week: [...], month: [...] }`.
 
 ## GET /schedule
 
-Get anime schedule.
+Get anime schedule for a calendar day.
+
+| Param | Type | Required | Description |
+|-------|------|----------|-------------|
+| `date` | string | No | Date in `YYYY-MM-DD` format — **defaults to today** (server local time) |
 
 ```bash
 curl "https://anikototvapi.vercel.app/api/schedule"
+curl "https://anikototvapi.vercel.app/api/schedule?date=2026-10-24"
 ```
 
-Returns array of scheduled anime with air times.
+Returns array of scheduled anime with air times. The date must be a real
+calendar date — `?date=2026-13-45` or `?date=yesterday` returns `400`.
 
 ---
 
@@ -683,33 +693,58 @@ Returns trending anime for sidebar display.
 
 ## GET /seasons/:id
 
-Get all seasons for an anime (main season, OVAs, movies, specials).
+Get the season list for an anime (main seasons, spin-offs, sequels).
 
 | Param | Type | Required | Description |
 |-------|------|----------|-------------|
-| `id` | number | Yes | Anime numeric ID |
+| `id` | string | Yes | Anime **slug** (`naruto-eybxz`) or numeric upstream animeId (`958`) |
 
 ```bash
-curl "https://anikototvapi.vercel.app/api/seasons/1642"
+curl "https://anikototvapi.vercel.app/api/seasons/naruto-eybxz"
+curl "https://anikototvapi.vercel.app/api/seasons/958"
 ```
 
-Returns all seasons including OVAs, movies, and specials for the anime.
+Sourced from the upstream `GET {base}api/seasons/{animeId}` AJAX fragment.
+Each entry carries `title`, `slug`, `poster`, `url` and `active` (the
+currently-playing season). Anime without a season split (e.g. One Piece)
+return `totalSeasons: 0` with an empty array; an unknown slug returns `404`.
+
+```json
+{
+  "success": true,
+  "results": {
+    "animeId": 958,
+    "slug": "naruto-eybxz",
+    "totalSeasons": 4,
+    "seasons": [
+      { "title": "Classic Series", "slug": "naruto-eybxz", "poster": "https://...", "url": "https://anikototv.to/watch/naruto-eybxz", "active": true }
+    ]
+  }
+}
+```
 
 ---
 
 ## GET /watch-order/:id
 
-Get recommended watch order for an anime franchise.
+Get the recommended watch order / related anime for a franchise.
 
 | Param | Type | Required | Description |
 |-------|------|----------|-------------|
-| `id` | number | Yes | Anime numeric ID |
+| `id` | string | Yes | Anime **slug** (`naruto-eybxz`) or numeric upstream animeId (`958`) |
 
 ```bash
+curl "https://anikototvapi.vercel.app/api/watch-order/naruto-eybxz"
 curl "https://anikototvapi.vercel.app/api/watch-order/1642"
 ```
 
-Returns recommended watch order sequence with relationship types.
+Sourced from the upstream `GET {base}api/watch-order/{animeId}` AJAX
+fragment. Entries are deduped by slug and the anime itself is excluded.
+
+**Known limitation:** upstream relation labels are currently broken
+placeholders (every item ships `id="sequel"` and a truncated
+`data-related` attribute), so every entry reports `relation: "related"`
+until the source site fixes them.
 
 ---
 
@@ -752,7 +787,7 @@ Get anime alphabetically by letter.
 
 | Param | Type | Required | Description |
 |-------|------|----------|-------------|
-| `letter` | string | Yes | Letter (a-z, or # for numbers) |
+| `letter` | string | Yes | `a`-`z`, `0`-`9`, `other` or `all` |
 | `page` | number | No | Page number (default: 1) |
 
 ```bash
@@ -781,16 +816,19 @@ Returns paginated list of upcoming anime with sub/dub counts, type, and rating.
 
 ## GET /top-rankings
 
-Get top-ranked anime with sort options.
+Get top-ranked anime for a ranking window.
 
 | Param | Type | Required | Description |
 |-------|------|----------|-------------|
-| `sort` | string | No | Sort mode: `day` (default), `week`, or `month` |
-| `page` | number | No | Page number (default: 1) |
+| `sort` | string | No | Ranking window: `day` (default), `week`, `month` — any other value returns `400` |
 
 ```bash
 curl "https://anikototvapi.vercel.app/api/top-rankings?sort=week"
 ```
+
+Nine unique entries per window (ranks 1-9), each read from its own
+homepage tab — the three windows are independent and never bleed into
+each other.
 
 **Response:**
 
@@ -878,7 +916,9 @@ Parse M3U8 playlist for available quality options.
 curl "https://anikototvapi.vercel.app/api/stream/qualities?url=https://example.com/playlist.m3u8"
 ```
 
-Returns array of quality objects with url, quality label, resolution, bandwidth, and codec.
+Returns array of quality objects with url, quality label, resolution,
+bandwidth, and codec. Error mapping: `415` when the URL does not return
+an HLS playlist (`#EXTM3U`), `502` when the fetch itself fails.
 
 ---
 
@@ -895,7 +935,10 @@ Direct embed provider URLs (Megavid / AniXo / MegaPlay) — iframe-ready players
 | `lang` | string | No | `sub` or `dub` (default `sub`) |
 | `provider` | string | No | Comma-separated filter: `megaplay`, `anixo`, `megavid` |
 
-\* Provide at least one of `slug`, `mal`, or `anilist`.
+\* Provide at least one of `slug`, `mal`, or `anilist` — otherwise `400`.
+`lang` must be exactly `sub` or `dub` (anything else is `400`), `ep` must
+be a positive integer, and `mal`/`anilist` must be numeric. A `mal`-only
+request also resolves `ids.anilistId` automatically (cached lookup).
 
 ```bash
 curl "https://anikototvapi.vercel.app/api/stream/embeds?slug=one-piece-odmau&ep=1"
@@ -911,7 +954,7 @@ Returns resolved IDs plus iframe-ready URLs per provider:
     "slug": "one-piece-odmau",
     "episode": 1,
     "lang": "sub",
-    "ids": { "animeId": 1642, "malId": "21", "anilistId": "21" },
+    "ids": { "animeId": 1642, "malId": 21, "anilistId": 21 },
     "providers": [
       { "id": "megaplay", "name": "MegaPlay", "url": "https://megaplay.buzz/stream/mal/21/1/sub", "iframeReady": true },
       { "id": "anixo", "name": "AniXo", "url": "https://anixo.buzz/embed/ani/21/1/sub?color=%23e63946", "iframeReady": true },
@@ -1183,6 +1226,32 @@ Returns the full OpenAPI spec document with all endpoint definitions, tags, and 
 
 ---
 
+## Error Responses
+
+Errors always come back as JSON with the standard creator envelope —
+never as an HTML page:
+
+```json
+{ "success": false, "message": "Endpoint not found", "creator": "Shinei Nouzen", "github": "...", "telegram": "...", "timestamp": "..." }
+```
+
+| Status | Meaning |
+|:---|:---|
+| `400` | Missing/invalid parameter (bad slug, invalid `sort`/`date`/`lang`, non-numeric id) |
+| `403` | SSRF guard — `url` points outside the streaming-domain allowlist |
+| `404` | Unknown `/api/*` path, unknown slug, or media that does not exist upstream |
+| `413` | Request body too large |
+| `415` | Body is not the expected media type (non-HLS playlist) |
+| `429` | Rate limit exceeded (see `Retry-After` and `X-RateLimit-*`) |
+| `502` | Upstream/mirror unreachable after retries |
+| `500` | Unexpected internal error |
+
+Client faults (4xx) fail fast on the first mirror instead of retrying the
+same broken request against every mirror, so bad requests come back in
+well under a second.
+
+---
+
 ## Response Patterns
 
 | Pattern | Format | Endpoints |
@@ -1191,7 +1260,7 @@ Returns the full OpenAPI spec document with all endpoint definitions, tags, and 
 | **Paginated data** | `results: { totalPages, data: [...] }` | `/search`, `/most-popular`, `/new-release`, `/newly-added`, `/latest-updated`, `/genre/:name`, `/type/:name`, `/status/:name`, `/az-list/:letter` |
 | **Full pagination** | `results: { totalPages, data: [...], pagination: {...} }` | `/filter` only |
 | **Three-period** | `results: { today/week/month: [...] }` or `{ day/week/month: [...] }` | `/top-ten`, `/trending-sidebar` |
-| **Single object** | `results: {...}` | `/home`, `/info`, `/episodes`, `/episodes-ajax`, `/random`, `/health`, `/stats`, `/cache/stats`, `/stream-qualities` |
+| **Single object** | `results: {...}` | `/home`, `/info`, `/episodes`, `/episodes-ajax`, `/random`, `/health`, `/stats`, `/cache/stats`, `/stream/qualities` |
 
 ---
 

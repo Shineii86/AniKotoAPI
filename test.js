@@ -82,6 +82,32 @@ const tests = [
   { name: "Watch Order", url: "/watch-order/one-piece-odmau", check: (d) => d.results?.related || d.results?.totalRelated, optional: true },
   { name: "Download", url: "/download?slug=one-piece-odmau&ep=1", check: (d) => d.results, optional: true },
 
+  // ---- FEATURE: Regression suite for the 2.6.1 diagnostic-sweep fixes ----
+  // Real per-anime seasons via upstream /api/seasons/ (was generic sidebar)
+  { name: "Seasons Real Data", url: "/seasons/naruto-eybxz", check: (d) => d.results?.animeId === 958 && d.results?.seasons?.length > 0 && d.results?.seasons[0]?.slug },
+  // Numeric id form must work (was HTTP 500)
+  { name: "Seasons Numeric Id", url: "/seasons/1642", check: (d) => d.results?.animeId === 1642 && Array.isArray(d.results?.seasons) },
+  // Real per-anime watch order via upstream /api/watch-order/ (was trending sidebar)
+  { name: "Watch Order Real Data", url: "/watch-order/naruto-eybxz", check: (d) => d.results?.animeId === 958 && d.results?.related?.length > 0 && d.results?.related.every((r) => r.slug && r.relation) },
+  { name: "Watch Order Numeric Id", url: "/watch-order/1642", check: (d) => d.results?.animeId === 1642 && Array.isArray(d.results?.related) },
+  // Rankings: one tab per sort — 9 unique entries, no cross-tab bleed
+  { name: "Top Rankings Month Window", url: "/top-rankings?sort=month", check: (d) => Array.isArray(d.results) && d.results.length === 9 && new Set(d.results.map((r) => r.slug)).size === 9 },
+  { name: "Top Rankings Invalid Sort", url: "/top-rankings?sort=popular", expectStatus: 400 },
+  // Schedule: defaults to today, rejects impossible calendar dates
+  { name: "Schedule Defaults To Today", url: "/schedule", check: (d) => Array.isArray(d.results) },
+  { name: "Schedule Invalid Date", url: "/schedule?date=2026-13-45", expectStatus: 400 },
+  // Error mapping: client faults are 4xx, never 500/HTML
+  { name: "Unknown API Path JSON 404", url: "/definitely-missing-endpoint", expectStatus: 404 },
+  { name: "Bad Slug Episodes 404", url: "/episodes/definitely-not-a-real-slug-xyz", expectStatus: 404 },
+  { name: "Bad Slug Watch 404", url: "/watch?slug=definitely-not-a-real-slug-xyz&ep=1", expectStatus: 404 },
+  { name: "Missing AniList Media 404", url: "/anilist/999999999", expectStatus: 404 },
+  // Validation gaps: lang, non-HLS playlist, missing ids
+  { name: "Embeds Invalid Lang", url: "/stream/embeds?mal=21&lang=klingon", expectStatus: 400 },
+  { name: "Embeds Resolves AniList From MAL", url: "/stream/embeds?mal=21&provider=megaplay", check: (d) => d.results?.ids?.malId === 21 && d.results?.ids?.anilistId === 21 },
+  { name: "Qualities Non-HLS 415", url: "/stream/qualities?url=https://example.com/", expectStatus: 415 },
+  // Payload hygiene: entities, doubled rating, placeholder episodes
+  { name: "Info Clean Fields", url: "/info?id=one-piece-odmau", check: (d) => /^\d+(\.\d+)?$/.test(String(d.results?.rating)) && !/[&;]/.test(String(d.results?.premiered)) && !/\s\s/.test(String(d.results?.altNames)) },
+
   // Enrichment (AniList)
   { name: "AniList Anime", url: "/anilist/21", check: (d) => d.results?.id === 21 && Array.isArray(d.results?.genres) },
   { name: "AniList (MAL alias)", url: "/anilist?mal=21", check: (d) => d.results?.idMal === 21 },
@@ -216,7 +242,6 @@ async function fetchJson(url) {
 
 async function runAll() {
   await detectBase();
-  console.log(`🧪 Running ${tests.length} tests...\n`);
   console.log(`📡 API: ${BASE}\n`);
 
   // ---- FEATURE: Resolve dynamic test dependencies ----
@@ -264,6 +289,8 @@ async function runAll() {
   }
 
   // ---- FEATURE: Run all tests sequentially ----
+  // NOTE: Printed after the dynamic pushes so the count matches the final list
+  console.log(`🧪 Running ${tests.length} tests...\n`);
   for (const test of tests) {
     await runTest(test);
   }

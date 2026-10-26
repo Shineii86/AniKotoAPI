@@ -45,11 +45,25 @@ const extractAnimeInfo = async (slug) => {
 
     const title = $("h1[itemprop='name'].title.d-title").text().trim() || "";
     const japaneseTitle = $("h1[itemprop='name'].title.d-title").attr("data-jp") || "";
-    const altNames = $(".names.font-italic").text().trim() || "";
+
+    // NOTE: Upstream ships a run-on alt-names blob ("One Piece;OP ONE PIECE
+    // One Piece; One Piece, One Piece, OP, ONE PIECE") — split on the
+    // separators and dedupe so the string stays readable and honest
+    const rawAltNames = $(".names.font-italic").text().trim() || "";
+    const altNames = [...new Set(
+      rawAltNames
+        .split(/[;,]/)
+        .map((name) => name.trim())
+        .filter(Boolean)
+    )].join(", ");
+
     const poster = $("img[itemprop='image']").attr("src") || "";
     const synopsis = $(".synopsis .content").text().trim() || "";
 
-    const rating = $("#w-rating .score .value").text().trim() || "";
+    // NOTE: #w-rating .score .value doubles the number (hidden schema.org
+    // span + visible span = "8.73   8.73 /10") — the data-score attribute
+    // on the container is the single clean value
+    const rating = $("#w-rating").attr("data-score") || "";
     const ratingValue = $("#w-rating span[itemprop='ratingValue']").text().trim() || "";
     const reviewCount = $("#w-rating span[itemprop='reviewCount']").text().trim() || "";
     const animeId = parseInt($("#watch-main").attr("data-id")) || 0;
@@ -57,14 +71,21 @@ const extractAnimeInfo = async (slug) => {
     // NOTE: .bmeta .meta:first-child contains: type, premiered, aired, status, genres
     // NOTE: Positional selectors (nth-child) are fragile — match source site's exact HTML structure
     const type = $(".bmeta .meta:first-child > div:nth-child(1) span").text().trim() || "";
-    const premiered = $(".bmeta .meta:first-child > div:nth-child(2) span").text().trim() || "";
+    // NOTE: Upstream writes the season as a literal "&NBSP 1999" (entity
+    // without a semicolon) inside the anchor — strip it, keep the year
+    const premiered = $(".bmeta .meta:first-child > div:nth-child(2) span a")
+      .text().replace(/&nbsp;?/gi, " ").replace(/\s+/g, " ").trim() ||
+      $(".bmeta .meta:first-child > div:nth-child(2) span").text().replace(/&nbsp;?/gi, " ").trim() || "";
     const aired = $(".bmeta .meta:first-child > div:nth-child(3) span").text().trim() || "";
     const status = $(".bmeta .meta:first-child > div:nth-child(4) span a").text().trim() || "";
 
     // NOTE: .bmeta .meta:nth-child(2) contains: MAL score, duration, episodes, studios, producers
     const malScore = $(".bmeta .meta:nth-child(2) > div:nth-child(1) span").text().trim() || "";
     const duration = $(".bmeta .meta:nth-child(2) > div:nth-child(2) span").text().trim() || "";
-    const episodes = $(".bmeta .meta:nth-child(2) > div:nth-child(3) span").text().trim() || "";
+    // NOTE: "?" means upstream genuinely doesn't know the episode count —
+    // report null instead of the placeholder character
+    const rawEpisodes = $(".bmeta .meta:nth-child(2) > div:nth-child(3) span").text().trim() || "";
+    const episodes = /^\d+$/.test(rawEpisodes) ? parseInt(rawEpisodes, 10) : null;
 
     const studios = [];
     $(".bmeta .meta:nth-child(2) > div:nth-child(4) span a[itemprop='director'] span[itemprop='name']").each((i, el) => {

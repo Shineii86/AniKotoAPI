@@ -107,7 +107,7 @@ const systemRoutes = (app, { jsonError, getMetrics }) => {
       const status = await getMirrorStatus();
       res.json({ success: true, results: status });
     } catch (error) {
-      jsonError(res, error.message);
+      jsonError(res, error.message, error.status || 500);
     }
   });
 
@@ -120,7 +120,9 @@ const systemRoutes = (app, { jsonError, getMetrics }) => {
   // ---- FEATURE: Reset mirror cache ----
   app.post("/api/mirrors/reset", (req, res) => {
     resetMirrorCache();
-    res.json({ success: true, message: "Mirror cache reset" });
+    // NOTE: `results` keeps the response shape consistent with every other
+    // endpoint ({ success, results, ... }) so generic clients don't special-case it
+    res.json({ success: true, message: "Mirror cache reset", results: { reset: true } });
   });
 
   // ---- FEATURE: Proxy status (ScraperAPI / FlareSolverr) ----

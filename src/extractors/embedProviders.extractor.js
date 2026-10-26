@@ -117,6 +117,17 @@ const buildEpisodeEmbeds = async ({ slug, episode, lang = "sub", providers = nul
     if (!resolvedAnilist) resolvedAnilist = ids.anilistId ? String(ids.anilistId) : null;
   }
 
+  // NOTE: mal-only callers still get a complete id set — the MAL→AniList
+  // mapping is a cached lookup, not a scrape. A lookup failure only costs
+  // the cosmetic anilistId, so swallow it and keep building embeds.
+  if (resolvedMal && !resolvedAnilist) {
+    try {
+      resolvedAnilist = await resolveAnilistIdFromMal(resolvedMal);
+    } catch {
+      resolvedAnilist = null;
+    }
+  }
+
   if (!resolvedMal && !resolvedAnilist) {
     return {
       slug: resolvedSlug,

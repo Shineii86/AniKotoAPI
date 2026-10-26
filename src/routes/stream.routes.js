@@ -193,7 +193,7 @@ const streamRoutes = (app, { jsonError }) => {
     try {
       await getWatchPage(req, res, next);
     } catch (error) {
-      jsonError(res, error.message);
+      jsonError(res, error.message, error.status || 500);
     }
   });
 
@@ -206,7 +206,7 @@ const streamRoutes = (app, { jsonError }) => {
     try {
       await getStreamInfo(req, res, next);
     } catch (error) {
-      jsonError(res, error.message);
+      jsonError(res, error.message, error.status || 500);
     }
   });
 
@@ -215,7 +215,7 @@ const streamRoutes = (app, { jsonError }) => {
     try {
       await getServerList(req, res, next);
     } catch (error) {
-      jsonError(res, error.message);
+      jsonError(res, error.message, error.status || 500);
     }
   });
 
@@ -224,7 +224,7 @@ const streamRoutes = (app, { jsonError }) => {
     try {
       await getMapperServers(req, res, next);
     } catch (error) {
-      jsonError(res, error.message);
+      jsonError(res, error.message, error.status || 500);
     }
   });
 
@@ -233,7 +233,7 @@ const streamRoutes = (app, { jsonError }) => {
     try {
       await getDownloadLinks(req, res, next);
     } catch (error) {
-      jsonError(res, error.message);
+      jsonError(res, error.message, error.status || 500);
     }
   });
 
@@ -242,7 +242,7 @@ const streamRoutes = (app, { jsonError }) => {
     try {
       await getResolvedStream(req, res, next);
     } catch (error) {
-      jsonError(res, error.message);
+      jsonError(res, error.message, error.status || 500);
     }
   });
 
@@ -251,7 +251,7 @@ const streamRoutes = (app, { jsonError }) => {
     try {
       await getStreamQualities(req, res, next);
     } catch (error) {
-      jsonError(res, error.message);
+      jsonError(res, error.message, error.status || 500);
     }
   });
 
@@ -260,7 +260,7 @@ const streamRoutes = (app, { jsonError }) => {
     try {
       await getEmbedProviders(req, res, next);
     } catch (error) {
-      jsonError(res, error.message);
+      jsonError(res, error.message, error.status || 500);
     }
   });
 
@@ -303,7 +303,7 @@ const streamRoutes = (app, { jsonError }) => {
       res.setHeader("Cache-Control", "public, max-age=30");
       res.send(rewritePlaylist(content, url));
     } catch (error) {
-      jsonError(res, error.message);
+      jsonError(res, error.message, error.status || 500);
     }
   });
 
@@ -363,7 +363,7 @@ const streamRoutes = (app, { jsonError }) => {
       response.data.on("error", () => res.destroy());
       response.data.pipe(res);
     } catch (error) {
-      jsonError(res, error.message);
+      jsonError(res, error.message, error.status || 500);
     }
   });
 };

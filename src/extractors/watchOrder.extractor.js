@@ -4,9 +4,9 @@
  * Repository: https://github.com/Shineii86/AniKotoAPI
  *
  * @description
- *   Extracts watch order and related anime information from the
- *   watch page sidebar. Returns trending/related anime with their
- *   metadata for continuous viewing.
+ *   Extracts watch order / related anime for a specific anime via the
+ *   upstream /api/watch-order/{animeId} JSON-AJAX endpoint and parses
+ *   the returned HTML fragment into a clean related-anime list.
  *
  * @exports
  *   extractWatchOrder
@@ -23,80 +23,122 @@ import { fetchWithMirror } from "../helper/mirror.helper.js";
 // WATCH ORDER EXTRACTOR
 // ══════════════════════════════════════════════════════════════
 
+// NOTE: /api/watch-order/ answers 500 unless the request is flagged
+// as XHR and carries the site origin as Referer
+const WATCH_ORDER_HEADERS = {
+  "X-Requested-With": "XMLHttpRequest",
+  Referer: "https://anikototv.to/",
+};
+
+// ---- FEATURE: Anime ID Resolution ----
+/**
+ * Resolves a slug (or passes through a numeric ID) to the upstream
+ * numeric animeId used by the /api/watch-order/ endpoint.
+ *
+ * @param {string|number} slugOrId - Anime slug or numeric ID
+ * @returns {Promise<{animeId: number, slug: string|null}>}
+ */
+const resolveWatchOrderTarget = async (slugOrId) => {
+  const raw = String(slugOrId ?? "").trim();
+
+  // NOTE: Numeric input is already a valid upstream animeId
+  if (/^\d+$/.test(raw)) {
+    return { animeId: parseInt(raw, 10), slug: null };
+  }
+
+  const { data } = await fetchWithMirror(`/watch/${raw}`, { headers: WATCH_ORDER_HEADERS });
+  const $ = cheerio.load(typeof data === "string" ? data : String(data));
+  const animeId = parseInt($("#watch-main").attr("data-id"), 10);
+
+  if (!animeId) {
+    const err = new Error(`Anime not found: ${raw}`);
+    err.status = 404;
+    throw err;
+  }
+
+  return { animeId, slug: raw };
+};
+
 // ---- FEATURE: Watch Order / Related Anime Extraction ----
 /**
- * Fetches and parses watch order / related anime for an anime.
- * Extracts related anime from the watch page sidebar.
+ * Fetches and parses the watch order / related anime for an anime.
  *
- * NOTE: The source site's AJAX endpoints (/ajax/related/) don't exist,
- * so we extract from the watch page HTML sidebar instead.
+ * Uses the upstream AJAX endpoint GET {base}api/watch-order/{animeId}
+ * which returns { status, result } where result is the #w-related HTML
+ * fragment (or false when the anime has no related list).
+ *
+ * NOTE: Upstream relation labels are currently broken — every
+ * .relation label ships a placeholder id="sequel" — so relation is
+ * returned as the constant "related" until upstream fixes them.
  *
  * @param {string|number} slugOrId - The anime slug or numeric ID
- * @returns {Promise<Object>} Object with animeId, totalRelated, related array
+ * @returns {Promise<Object>} Object with animeId, slug, totalRelated, related array
  *
  * @example
  *   const data = await extractWatchOrder("one-piece-odmau");
  *   console.log(data.totalRelated);
  */
 const extractWatchOrder = async (slugOrId) => {
+  const { animeId, slug } = await resolveWatchOrderTarget(slugOrId);
+
+  const { data } = await fetchWithMirror(`/api/watch-order/${animeId}`, {
+    headers: WATCH_ORDER_HEADERS,
+  });
+
+  let payload = null;
   try {
-    const path = `/watch/${slugOrId}`;
-    const { data } = await fetchWithMirror(path);
+    payload = JSON.parse(typeof data === "string" ? data : String(data));
+  } catch {
+    payload = null;
+  }
 
-    const html = typeof data === "string" ? data : String(data);
-    const $ = cheerio.load(html);
+  const fragment =
+    payload && payload.status === 200 &&
+    typeof payload.result === "string" && payload.result.trim().length > 2
+      ? payload.result
+      : "";
 
-    const animeId = parseInt($("#watch-main").attr("data-id")) || 0;
-    const related = [];
+  const $ = cheerio.load(fragment);
+  const related = [];
+  const seen = new Set();
 
-    // NOTE: Try dedicated related section first (#w-related)
-    $("#w-related .item, .w-side-section:has(.title:contains('Related')) .item").each((_, el) => {
-      const link = $(el).find("a").first();
-      const href = link.attr("href") || "";
-      const title = $(el).find(".name").text().trim() || "";
-      const poster = $(el).find("img").attr("src") || "";
-      const slug = href.split("/watch/").pop() || $(el).find(".poster").attr("data-tip") || "";
-      const relation = $(el).find(".relation, .serieslabelitem").text().trim() || "related";
+  $("#w-related .item, #watch-order .item, .item.flexserieslist").each((_, el) => {
+    const node = $(el);
 
-      if (slug) {
-        related.push({ title, slug, poster, url: href, relation });
-      }
-    });
+    // NOTE: Anchors only — search-style "?keyword=" links are not watch pages
+    const link = node.find('a[href*="/watch/"]').first();
+    const href = link.attr("href") || "";
+    if (!href || href.includes("?keyword=")) return;
 
-    // NOTE: Fallback — extract from #watch-order section (trending sidebar items as suggested watch order)
-    if (related.length === 0) {
-      $("#watch-order .item, .w-side-section:has(.title:contains('Trending')) .item, .w-side-section:first .item").each((_, el) => {
-        const link = $(el).find("a").first();
-        const href = link.attr("href") || "";
-        const title = $(el).find(".name").text().trim() || "";
-        const poster = $(el).find("img").attr("src") || "";
-        // NOTE: Items may not have <a> tags — fall back to data-tip attribute for slug
-        let slug = href.split("/watch/").pop() || "";
-        if (!slug) {
-          const dataTip = $(el).find(".poster").attr("data-tip") || "";
-          if (dataTip) slug = dataTip;
-        }
-        const score = $(el).find(".score").text().trim() || "";
-        // NOTE: .meta .dot elements: [0]=score, [1]=type, [2]=episodes
-        const metaDots = $(el).find(".meta .dot");
-        const type = metaDots.eq(1).text().trim() || "";
-        const episodes = metaDots.eq(2).text().trim() || "";
+    const itemSlug = href.split("/watch/").pop().split(/[?#]/)[0] || "";
+    const title = node.find(".name, .d-title").first().text().trim() || link.text().trim() || "";
 
-        if (slug && slug !== slugOrId) {
-          related.push({ title, slug, poster, url: href, relation: "trending", score, type, episodes });
-        }
+    // NOTE: .poster[data-tip] carries the site's numeric ID — use it to
+    // drop the item itself from its own watch-order list
+    const siteId = node.find(".poster").attr("data-tip") || "";
+    if (siteId && String(animeId) === String(siteId)) return;
+    if (itemSlug && itemSlug === slug) return;
+
+    const poster = node.find("img").attr("src") || link.find("img").attr("src") || "";
+
+    if (itemSlug && title && !seen.has(itemSlug)) {
+      seen.add(itemSlug);
+      related.push({
+        title,
+        slug: itemSlug,
+        poster,
+        url: href,
+        relation: "related",
       });
     }
+  });
 
-    return {
-      animeId,
-      slug: slugOrId,
-      totalRelated: related.length,
-      related,
-    };
-  } catch (error) {
-    throw error;
-  }
+  return {
+    animeId,
+    slug: slug ?? null,
+    totalRelated: related.length,
+    related,
+  };
 };
 
 export { extractWatchOrder };

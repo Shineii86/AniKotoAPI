@@ -288,7 +288,7 @@
  *   │   ├── performance-benchmarker.md
  *   │   ├── security-architect.md
  *   │   └── technical-writer.md
- *   └── test.js                      # Integration test suite (48 tests)
+ *   └── test.js                      # Integration test suite (64 tests)
  */
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -665,7 +665,7 @@
  *      empty or malformed data.
  *    • Controllers detect missing required fields and return appropriate
  *      error messages rather than empty objects.
- *    • Monitoring via test.js integration suite (48 tests) catches
+ *    • Monitoring via test.js integration suite (64 tests) catches
  *      structural regressions.
  */
 
@@ -858,7 +858,7 @@
  *  │    • Proxy rewrite covers bare lines and URI attributes             │
  *  │    • Segments streamed with Range, retries, 415/403 guards          │
  *  │    • Live CDN allowlist (shiora/ivorysummit/nexabloom/…)            │
- *  │    • 48 integration tests (48 passing, 0 skipped)                   │
+ *  │    • 64 integration tests (64 passing, 0 skipped)                   │
  *  │                                                                      │
  *  │  v2.6.0                                                             │
  *  │    • 42 content endpoints, 29 extractors, 31 controllers            │

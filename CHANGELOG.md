@@ -8,28 +8,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [2.6.1] - 2026-10-24
 
 ### Added
-- **Proxy Tests**: New `Proxy SSRF Guard` case (`expectStatus: 403`, foreign hosts must stay blocked) and a dynamic `Stream Proxy` case that resolves a live stream and validates the rewritten playlist as raw text — the runner gained a `checkText` branch for non-JSON responses next to the existing `expectStatus` branch; `Servers` now swaps in real `server_ids` (the `ids=1` placeholder made upstream return 500); suite now **48 tests** (48 passing, 0 skipped)
+- **Proxy Tests**: New `Proxy SSRF Guard` case (`expectStatus: 403`, foreign hosts must stay blocked) and a dynamic `Stream Proxy` case that resolves a live stream and validates the rewritten playlist as raw text — the runner gained a `checkText` branch for non-JSON responses next to the existing `expectStatus` branch; `Servers` now swaps in real `server_ids` (the `ids=1` placeholder made upstream return 500)
+- **Response Sanitizer**: New `src/middleware/sanitizeJson.middleware.js` — one `res.json` wrapper that decodes HTML entities case-insensitively (`&amp;`, `&#39;`, non-terminated `&NBSP 1999`), collapses horizontal whitespace and trims strings, and coerces stringified identity keys (`animeId`, `malId`, `anilistId`, `mal_id`, `anilist_id`) to numbers — titles like `"Tom &amp; Jerry"` and `"&NBSP 1999"` premieres no longer leak to clients
+- **Rate-Limit Skip**: `createRateLimiter({ skip })` option; `/api/health` and `/api/openapi` are exempt so monitoring/spec readers are never throttled out of the window
+- **Sweep Regression Suite**: 16 new cases (real seasons by slug and numeric id, real watch-order data, month window with 9 unique slugs, invalid `sort`, schedule default + impossible date, JSON 404 for unknown `/api/*`, 404 for bad-slug `/episodes` + `/watch` + missing AniList media, embeds `lang`/`mal` validation + MAL→AniList resolution, `415` for a non-HLS qualities URL, `/info` field hygiene); suite now **64 tests** (64 passing, 0 skipped) and the runner prints its count *after* the dynamic pushes so "Running N tests" matches the final list
 
 ### Changed
+- **Seasons & Watch Order (P0 fix)**: both endpoints stopped serving the generic trending sidebar for every anime — they now resolve `animeId` (numeric id passes through, slug reads `#watch-main[data-id]`) and parse the real upstream AJAX fragments `GET {base}api/seasons/{animeId}` and `GET {base}api/watch-order/{animeId}` (XHR header + Referer required): Naruto returns 4 real seasons (`Classic Series`, `Shippuden Series`, …), One Piece honestly reports `totalSeasons: 0`, watch-order returns 56 One Piece / 25 Naruto related entries deduped with the anime itself excluded; slug **and** numeric forms work (`/seasons/1642` was 500, now 200); upstream relation labels are broken placeholders so every entry reports `relation: "related"` (documented in endpoints.md + OpenAPI)
+- **Top Rankings (P0 fix)**: the selector is scoped to `#top-anime .tab-content[data-name=day|week|month]` (the old unfiltered selector merged all three tabs → 27 items, ranks 1–27, byte-identical for every `sort`) — each window now returns 9 unique slugs ranked 1–9, and `?sort=popular` returns **400** instead of silently falling back to day
+- **Schedule Defaults**: `?date=` is now optional and defaults to today (server local time) and must be a real `YYYY-MM-DD` date — `2026-13-45` / `yesterday` return **400** instead of 200
+- **Strict Input Validation**: `/stream/embeds` rejects non-`sub|dub` `lang`, non-integer `ep` and non-numeric `mal`/`anilist` with **400** (was silently clamped/probed), `/stream/qualities` runs `parseM3u8Qualities(url, { strict: true })` → **415** for a non-playlist body and **502** for fetch failures (was `qualities: []` + 200)
+- **OpenAPI**: 20 parameters flagged `required: true` to match the controllers they already 400 on (`keyword`, `slug`+`ep`, `ids`, `malId`+`slug`+`timestamp`, `id`, `url`, `mal`, …); descriptions updated for the seasons/watch-order sources + relation limitation, schedule default, rankings windows, qualities `415`, embeds one-of + `lang`, `/info` numeric id types
 - **Stream Proxy Upgrade**: `/api/stream/proxy` and `/api/stream/ts-proxy` reworked — playlists now rewrite **every** media reference (bare lines *and* `URI="…"` attributes on `#EXT-X-KEY`/`#EXT-X-MAP`/I-frame playlists, leaving non-allowlisted hosts untouched), upstream fetches get one bounded retry on network/429/5xx errors, a non-playlist body is rejected with `415`, segments are **streamed** instead of buffered with `Range` forwarded upstream, HTML error pages are rejected instead of served as media, `Content-Type` is derived per extension (`.vtt`, `.m4a`, `.mp4`, …) and `Accept-Ranges` is only advertised when the CDN supports it; decoy segment paths (`.jpg`/`.html`/`.js` names serving MPEG-TS) are answered as `video/mp2t` either way
 - **Proxy Allowlist**: `DEFAULT_PROXY_DOMAINS` now includes MegaPlay's current media hosts — `shiora.top` (resolved manifests), `ivorysummit.world` (subtitles/thumbnails), `nexabloom.top` (content manifests) and `eclipseharbor.space` (content segments); dead `megaplay-1.buzz` paths no longer matter since resolution goes through `getSources`
 - **Resolver CDN Selection**: `resolveStreamUrl` stops forwarding the embed's `s=` CDN token to `getSources` — it routes segments to TikTok's ad CDN (unreachable from many networks, impossible to allowlist safely) instead of the plain `/anime/` content CDN
 - **Version**: Bumped to 2.6.1
-- **Docs Sync**: `/stream/proxy` + `/stream/ts-proxy` sections rewritten in README, `docs/streaming.md` and `docs/endpoints.md` (current allowlist, rewrite rules, `415`/`403` answers, streaming behaviour); test counts synced to 48 across README, `docs/index.md`, `docs/architecture.md` and `docs/testing.md` (including the runner architecture diagram); landing page refreshed — endpoint counter corrected to 42, genre counter to 43, hero badge shows `v2.6.1`, three new feature cards (AniList Enrichment, CORS-free Streaming, Embed Providers), four new explorer entries (`/anilist`, `/anilist/season`, `/watch`, `/stream/embeds`), AniList console button and footer link, meta/JSON-LD descriptions mention AniList metadata; `package-lock.json` package version synced (it still read `2.5.1`)
+- **Docs Sync**: `/stream/proxy` + `/stream/ts-proxy` sections rewritten in README, `docs/streaming.md` and `docs/endpoints.md` (current allowlist, rewrite rules, `415`/`403` answers, streaming behaviour); test counts synced to **64** across README, `docs/index.md`, `docs/architecture.md` and `docs/testing.md` (including the runner architecture diagram); landing page refreshed — endpoint counter corrected to 42, genre counter to 43, hero badge shows `v2.6.1`, three new feature cards (AniList Enrichment, CORS-free Streaming, Embed Providers), four new explorer entries (`/anilist`, `/anilist/season`, `/watch`, `/stream/embeds`), AniList console button and footer link, meta/JSON-LD descriptions mention AniList metadata; `package-lock.json` package version synced (it still read `2.5.1`)
 
 ### Fixed
+- **Fast-Fail Error Mapping (P1)**: `fetchWithMirror` no longer replays client faults across every mirror — structured upstream `{status ≥ 400}` answers, HTTP `400`/`404` and "Bad request" 5xx bodies are marked *terminal* (no retries, no mirror blacklisting) and mapped to the right status, so a bad slug now answers **404 in ~0.5–1 s instead of 500 after 13–16 s**; untyped failures still keep the 502 + proxy fallback path
+- **Status Passthrough**: every `catch` in `src/routes/*` (42 call sites) now passes `error.status || 500` to `jsonError`, and `/stream` no longer wraps typed upstream faults as a blanket `Upstream API error: …` 502 — `?id=notarealid` returns **400**
+- **JSON 404s (P1)**: the catch-all answers unknown `/api/*` paths with `{ success: false, message: "Endpoint not found" }` instead of `public/404.html`, and `/api/mirrors/reset` gained the standard `results` key
+- **429 Envelope**: `addCreatorInfo` is mounted *before* the rate limiter, so throttled responses carry the creator metadata like every other reply
+- **AniList Not-Found**: the helper's thrown `"Anime not found on AniList"` is mapped to **404** (was 502 for `/anilist/999999999`)
+- **Info Artifacts**: `rating` reads `#w-rating[data-score]` (the `.score .value` text doubled the number: `"8.73   8.73 /10"`), `premiered` strips upstream's non-terminated `&NBSP`, `altNames` is split/deduped (`"One Piece, OP, ONE PIECE …"` instead of a run-on blob), `episodes` is a number or `null` (was the literal `"?"`)
 - **Stream Resolver (BREAKING upstream drift)**: the legacy `/ajax/sources` host (`megaplay-1.buzz`) no longer resolves in DNS, so `/stream/resolve` and `/stream/qualities` were failing — resolution now calls `stream/getSourcesNew` → `stream/getSources` on the embed host itself and decrypts the AES-256-CBC `enc` payload (key/IV taken from the player) to the `master.m3u8` URL; the legacy call is kept as a fallback, `kind: "captions"` tracks are counted as subtitles and `skipData` is normalized to the site's `[start, end]` array shape
 - **Stream Qualities**: the qualities fetch sent no player-origin Referer and was answered with CDN 403, so `/stream/qualities` always reported `totalQualities: 0` — it now sends `streamRefererHeaders()` and returns the real variant list (verified: `1080p`)
 
 ### Verified
 ```
-node --check: all 93 JS files OK
-Local suite: 48 passed / 0 failed / 0 skipped (48 total)
-/stream/resolve → real master.m3u8, qualities ["1080p"], /stream/qualities → 1
-/stream/proxy → rewritten playlist (#EXTM3U + proxied variant line)
-/stream/ts-proxy → 200 video/mp2t 1161464B (decoy .jpg segment), Range forwarded
-/stream/proxy?url=https://example.com/x.m3u8 → 403, non-playlist body → 415
-/api/health → version 2.6.1, /api/openapi info.version → 2.6.1
+node --check: all 94 JS files OK (sanitizeJson.middleware.js added)
+Local suite: 64 passed / 0 failed / 0 skipped (64 total)
+Full diagnostic sweep re-run: 97/97 requests, 0 × 5xx, 0 × 429,
+  statuses = { 200: 50, 400: 33, 403: 3, 404: 11 }
+seasons: numeric 958 → 4 seasons / slug naruto-eybxz → 4 / 1642 → 0 (honest empty)
+watch-order: 1642 → 56 related / 958 → 25 related (distinct, self excluded)
+top-rankings: day/week/month → 9 unique slugs each, ranks 1–9, day ≠ week ≠ month
+schedule (no date) → 200 today, ?date=2026-13-45 → 400
+/api/seasons/definitely-not → 404 fast, /api/nope → JSON 404, 429 carries creator
+/stream/embeds?mal=21 → ids { malId: 21, anilistId: 21 }, ?lang=klingon → 400
+/stream/qualities?url=https://example.com/ → 415, /info rating "8.73", episodes null
+/api/health → version 2.6.1, /api/openapi info.version → 2.6.1, 49 paths
 ```
 
 ## [2.6.0] - 2026-10-24

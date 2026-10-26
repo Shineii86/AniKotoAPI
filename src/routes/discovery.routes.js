@@ -55,7 +55,7 @@ const discoveryRoutes = (app, { jsonError }) => {
     try {
       await getSpotlight(req, res, next);
     } catch (error) {
-      jsonError(res, error.message);
+      jsonError(res, error.message, error.status || 500);
     }
   });
 
@@ -64,7 +64,7 @@ const discoveryRoutes = (app, { jsonError }) => {
     try {
       await getTrending(req, res, next);
     } catch (error) {
-      jsonError(res, error.message);
+      jsonError(res, error.message, error.status || 500);
     }
   });
 
@@ -73,7 +73,7 @@ const discoveryRoutes = (app, { jsonError }) => {
     try {
       await getTopTen(req, res, next);
     } catch (error) {
-      jsonError(res, error.message);
+      jsonError(res, error.message, error.status || 500);
     }
   });
 
@@ -82,7 +82,7 @@ const discoveryRoutes = (app, { jsonError }) => {
     try {
       await getSuggestions(req, res, next);
     } catch (error) {
-      jsonError(res, error.message);
+      jsonError(res, error.message, error.status || 500);
     }
   });
 
@@ -91,7 +91,7 @@ const discoveryRoutes = (app, { jsonError }) => {
     try {
       await getRandom(req, res, next);
     } catch (error) {
-      jsonError(res, error.message);
+      jsonError(res, error.message, error.status || 500);
     }
   });
 
@@ -100,7 +100,7 @@ const discoveryRoutes = (app, { jsonError }) => {
     try {
       await getPopular(req, res, next);
     } catch (error) {
-      jsonError(res, error.message);
+      jsonError(res, error.message, error.status || 500);
     }
   });
 
@@ -113,7 +113,7 @@ const discoveryRoutes = (app, { jsonError }) => {
     try {
       await getNewRelease(req, res, next);
     } catch (error) {
-      jsonError(res, error.message);
+      jsonError(res, error.message, error.status || 500);
     }
   });
 
@@ -122,7 +122,7 @@ const discoveryRoutes = (app, { jsonError }) => {
     try {
       await getNewlyAdded(req, res, next);
     } catch (error) {
-      jsonError(res, error.message);
+      jsonError(res, error.message, error.status || 500);
     }
   });
 
@@ -131,7 +131,7 @@ const discoveryRoutes = (app, { jsonError }) => {
     try {
       await getLatestUpdated(req, res, next);
     } catch (error) {
-      jsonError(res, error.message);
+      jsonError(res, error.message, error.status || 500);
     }
   });
 
@@ -144,7 +144,7 @@ const discoveryRoutes = (app, { jsonError }) => {
     try {
       await getTrendingSidebar(req, res, next);
     } catch (error) {
-      jsonError(res, error.message);
+      jsonError(res, error.message, error.status || 500);
     }
   });
 
@@ -157,7 +157,7 @@ const discoveryRoutes = (app, { jsonError }) => {
     try {
       await getUpcomingAnime(req, res, next);
     } catch (error) {
-      jsonError(res, error.message);
+      jsonError(res, error.message, error.status || 500);
     }
   });
 
@@ -170,7 +170,7 @@ const discoveryRoutes = (app, { jsonError }) => {
     try {
       await getTopAnimeRankings(req, res, next);
     } catch (error) {
-      jsonError(res, error.message);
+      jsonError(res, error.message, error.status || 500);
     }
   });
 
@@ -183,7 +183,7 @@ const discoveryRoutes = (app, { jsonError }) => {
     try {
       await getRecentlyUpdatedTabs(req, res, next);
     } catch (error) {
-      jsonError(res, error.message);
+      jsonError(res, error.message, error.status || 500);
     }
   });
 
@@ -196,7 +196,7 @@ const discoveryRoutes = (app, { jsonError }) => {
     try {
       await getCompletedAnime(req, res, next);
     } catch (error) {
-      jsonError(res, error.message);
+      jsonError(res, error.message, error.status || 500);
     }
   });
 };

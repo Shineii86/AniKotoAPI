@@ -63,7 +63,7 @@ const contentRoutes = (app, { jsonError }) => {
     try {
       await getHomeInfo(req, res, next);
     } catch (error) {
-      jsonError(res, error.message);
+      jsonError(res, error.message, error.status || 500);
     }
   });
 
@@ -80,7 +80,7 @@ const contentRoutes = (app, { jsonError }) => {
       try {
         await getAnimeInfo(req, res, next);
       } catch (error) {
-        jsonError(res, error.message);
+        jsonError(res, error.message, error.status || 500);
       }
     }
   );
@@ -97,7 +97,7 @@ const contentRoutes = (app, { jsonError }) => {
       try {
         await getSearchResults(req, res, next);
       } catch (error) {
-        jsonError(res, error.message);
+        jsonError(res, error.message, error.status || 500);
       }
     }
   );
@@ -110,7 +110,7 @@ const contentRoutes = (app, { jsonError }) => {
       try {
         await getSearchSuggestions(req, res, next);
       } catch (error) {
-        jsonError(res, error.message);
+        jsonError(res, error.message, error.status || 500);
       }
     }
   );
@@ -127,7 +127,7 @@ const contentRoutes = (app, { jsonError }) => {
       try {
         await getLatestEpisode(req, res, next);
       } catch (error) {
-        jsonError(res, error.message);
+        jsonError(res, error.message, error.status || 500);
       }
     }
   );
@@ -137,7 +137,7 @@ const contentRoutes = (app, { jsonError }) => {
     try {
       await getEpisodeList(req, res, next);
     } catch (error) {
-      jsonError(res, error.message);
+      jsonError(res, error.message, error.status || 500);
     }
   });
 
@@ -146,7 +146,7 @@ const contentRoutes = (app, { jsonError }) => {
     try {
       await getEpisodeListAjax(req, res, next);
     } catch (error) {
-      jsonError(res, error.message);
+      jsonError(res, error.message, error.status || 500);
     }
   });
 
@@ -159,7 +159,7 @@ const contentRoutes = (app, { jsonError }) => {
     try {
       await getSchedule(req, res, next);
     } catch (error) {
-      jsonError(res, error.message);
+      jsonError(res, error.message, error.status || 500);
     }
   });
 
@@ -172,7 +172,7 @@ const contentRoutes = (app, { jsonError }) => {
     try {
       await getFilter(req, res, next);
     } catch (error) {
-      jsonError(res, error.message);
+      jsonError(res, error.message, error.status || 500);
     }
   });
 
@@ -185,7 +185,7 @@ const contentRoutes = (app, { jsonError }) => {
     try {
       await getSeasons(req, res, next);
     } catch (error) {
-      jsonError(res, error.message);
+      jsonError(res, error.message, error.status || 500);
     }
   });
 
@@ -194,7 +194,7 @@ const contentRoutes = (app, { jsonError }) => {
     try {
       await getWatchOrder(req, res, next);
     } catch (error) {
-      jsonError(res, error.message);
+      jsonError(res, error.message, error.status || 500);
     }
   });
 
@@ -207,7 +207,7 @@ const contentRoutes = (app, { jsonError }) => {
     try {
       await getAzList(req, res, next);
     } catch (error) {
-      jsonError(res, error.message);
+      jsonError(res, error.message, error.status || 500);
     }
   });
 };

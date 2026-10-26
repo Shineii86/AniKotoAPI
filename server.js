@@ -34,6 +34,7 @@ import fs from "fs";
 
 import { createApiRoutes } from "./src/routes/apiRoutes.js";
 import { addCreatorInfo } from "./src/middleware/creatorInfo.js";
+import { sanitizeJson } from "./src/middleware/sanitizeJson.middleware.js";
 import { assignRequestId } from "./src/middleware/requestId.middleware.js";
 import { createCorsMiddleware } from "./src/middleware/cors.middleware.js";
 import { addSecurityHeaders } from "./src/middleware/securityHeaders.middleware.js";
@@ -126,11 +127,23 @@ app.get("/privacy", (req, res) => {
 // API MIDDLEWARE
 // ══════════════════════════════════════════════════════════════
 
-// ---- FEATURE: Rate limiting (configurable, default 100 requests per minute per IP) ----
-app.use(createRateLimiter());
-
 // ---- FEATURE: Creator info middleware (injects attribution into all responses) ----
+// NOTE: Registered before the rate limiter so 429 responses carry the
+// creator envelope too — a limiter reply must look like every other reply.
 app.use(addCreatorInfo);
+
+// ---- FEATURE: Response sanitizer (HTML entities + numeric id normalization) ----
+// NOTE: Upstream titles/descriptions ship raw entities (&amp;, &nbsp, &#39; …)
+// and stringified numeric ids. This runs once at the JSON boundary so every
+// endpoint returns clean, consistent payloads.
+app.use(sanitizeJson);
+
+// ---- FEATURE: Rate limiting (configurable, default 100 requests per minute per IP) ----
+// NOTE: /api/health and /api/openapi are unauthenticated read-only probes —
+// monitoring and spec readers must not be throttled out of the window.
+app.use(createRateLimiter({
+  skip: (req) => req.path === "/api/health" || req.path === "/api/openapi",
+}));
 
 // ---- FEATURE: Request timeout middleware (30 seconds) ----
 app.use(requestTimeout);
@@ -159,6 +172,14 @@ app.use((err, req, res, next) => {
 
 // ---- FEATURE: Catch-all 404 handler for undefined routes ----
 app.use((req, res) => {
+  // NOTE: API consumers get JSON, never the HTML error page — otherwise
+  // clients parsing res.json() crash on "<!DOCTYPE html>"
+  if (req.path.startsWith("/api")) {
+    return res.status(404).json({
+      success: false,
+      message: "Endpoint not found",
+    });
+  }
   const filePath = path.join(publicDir, "404.html");
   if (fs.existsSync(filePath)) {
     res.status(404).sendFile(filePath);

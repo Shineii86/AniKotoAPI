@@ -5,7 +5,7 @@
  *
  * @description
  *   Extracts top anime rankings from the homepage with sort options.
- *   Supports both "top" (all-time) and "newest" ranking modes.
+ *   Supports "day", "week" and "month" ranking tabs.
  *   Parses ranked items with position numbers 1-9.
  *
  * @exports
@@ -23,12 +23,15 @@ import { fetchWithMirror } from "../helper/mirror.helper.js";
 // TOP ANIME RANKINGS EXTRACTION
 // ══════════════════════════════════════════════════════════════
 
+const VALID_SORTS = ["day", "week", "month"];
+
 // ---- FEATURE: Extract top anime rankings with sort option ----
 /**
  * Fetches and parses the top anime rankings from the homepage.
- * Supports switching between "top" (all-time) and "newest" rankings.
+ * Each ranking window (day/week/month) lives in its own
+ * #top-anime .tab-content[data-name="..."] panel with 9 items.
  *
- * @param {string} sort - Ranking sort mode: "day", "week", or "month" (default: "day")
+ * @param {string} sort - Ranking sort mode: "day", "week" or "month" (default: "day")
  * @returns {Promise<Array<Object>>} Array of ranked anime objects
  * @returns {number} return[].rank - Ranking position (1-9)
  * @returns {string} return[].slug - URL slug for the anime
@@ -38,55 +41,47 @@ import { fetchWithMirror } from "../helper/mirror.helper.js";
  * @returns {number} return[].sub - Subbed episode count
  * @returns {number} return[].dub - Dubbed episode count
  * @returns {string} return[].type - Anime type
- * @returns {string} return[].views - View count
  *
  * @example
- *   const topAnime = await extractTopAnimeRankings("top");
+ *   const topAnime = await extractTopAnimeRankings("week");
  *   console.log(topAnime[0].rank); // 1
- *   console.log(topAnime[0].title); // #1 anime
- *
- *   const newest = await extractTopAnimeRankings("newest");
- *   console.log(newest[0].title); // #1 newest anime
  */
-const extractTopAnimeRankings = async (sort = "top") => {
-  try {
-    // NOTE: Homepage contains both top and newest rankings in tabbed sections
-    const { data } = await fetchWithMirror("/home");
-    const $ = cheerio.load(data);
+const extractTopAnimeRankings = async (sort = "day") => {
+  const window = VALID_SORTS.includes(sort) ? sort : "day";
 
-    const results = [];
+  // NOTE: Homepage contains three ranking tabs — day / week / month
+  const { data } = await fetchWithMirror("/home");
+  const $ = cheerio.load(data);
 
-    // NOTE: Ranking items live inside #top-anime .tab-content .scaff.side.items
-    // Each item is an <a class="item rankN"> with rank classes rank1..rank9
-    // The data-name on .tab-content controls which tab: day/week/month
-    const tabSelector = sort === "week" ? "[data-name='week']"
-      : sort === "month" ? "[data-name='month']"
-      : "[data-name='day']";
+  const results = [];
+  const seen = new Set();
 
-    $(`#top-anime .tab-content${tabSelector} a.item, #top-anime .scaff.side.items a.item`).each((i, el) => {
-      const slug = $(el).attr("href")?.split("/watch/").pop() || "";
-      if (!slug) return;
+  // NOTE: Scope strictly to the requested tab — the old unfiltered selector
+  // also grabbed sibling tabs, producing 27 items with duplicated ranks
+  const tabSelector = `[data-name='${window}']`;
 
-      const poster = $(el).find("img").attr("src") || "";
-      const title = $(el).find(".name").text().trim() || "";
-      const japaneseTitle = $(el).find(".name").attr("data-jp") || "";
-      const sub = parseInt($(el).find(".ep-status.sub span").text().trim()) || 0;
-      const dub = parseInt($(el).find(".ep-status.dub span").text().trim()) || 0;
-      const type = $(el).find(".meta .dot:last-child").text().trim() || "";
+  $(`#top-anime .tab-content${tabSelector} a.item`).each((i, el) => {
+    const slug = $(el).attr("href")?.split("/watch/").pop() || "";
+    if (!slug || seen.has(slug)) return;
+    seen.add(slug);
 
-      // NOTE: Rank is extracted from the rankN class on the <a> element
-      const rankClass = [...$(el).attr("class") || ""].join(" ").match(/rank(\d+)/);
-      const rank = rankClass ? parseInt(rankClass[1]) : i + 1;
+    const poster = $(el).find("img").attr("src") || "";
+    const title = $(el).find(".name").text().trim() || "";
+    const japaneseTitle = $(el).find(".name").attr("data-jp") || "";
+    const sub = parseInt($(el).find(".ep-status.sub span").text().trim()) || 0;
+    const dub = parseInt($(el).find(".ep-status.dub span").text().trim()) || 0;
+    const type = $(el).find(".meta .dot:last-child").text().trim() || "";
 
-      results.push({ rank, slug, poster, title, japaneseTitle, sub, dub, type });
-    });
+    // NOTE: Rank comes from the rankN class on the <a> element
+    const rankClass = String($(el).attr("class") || "").match(/\brank(\d+)\b/);
+    const rank = rankClass ? parseInt(rankClass[1], 10) : i + 1;
 
-    return results;
-  } catch (error) {
-    throw error;
-  }
+    results.push({ rank, slug, poster, title, japaneseTitle, sub, dub, type });
+  });
+
+  return results;
 };
 
-export { extractTopAnimeRankings };
+export { extractTopAnimeRankings, VALID_SORTS };
 
 // ══════════════════════════════════════════════════════════════ END: topAnimeRankings.extractor.js

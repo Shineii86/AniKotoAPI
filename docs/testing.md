@@ -136,9 +136,9 @@ Marked with `optional: true`. Instead of failing, they print `⏭️ Skipped` wh
 ```
 📡 Detected local server — using localhost:4444
 
-🧪 Running 48 tests...
-
 📡 API: http://localhost:4444/api
+
+🧪 Running 64 tests...
 
 [MIRROR] Switched to: https://anikototv.to
 ✅ Home (438ms)
@@ -148,7 +148,7 @@ Marked with `optional: true`. Instead of failing, they print `⏭️ Skipped` wh
 ✅ Episodes Ajax (1304ms)
 
 ==================================================
-📊 Results: 48 passed, 0 failed, 0 skipped, 48 total
+📊 Results: 64 passed, 0 failed, 0 skipped, 64 total
 ==================================================
 
 ⚡ Performance:
@@ -188,12 +188,12 @@ The test suite reports:
 ```
 test.js
 ├── detectBase()           # Auto-detect local vs live API
-├── tests[]                # Static test definitions (45 tests)
+├── tests[]                # Static test definitions (61 tests)
 ├── runAll()
 │   ├── detectBase()       # Resolve API URL
 │   ├── fetchJson()        # Pre-fetch dynamic data (animeId, linkId, stream URL)
 │   ├── push dynamic tests # Episodes Ajax, Stream Resolve, Stream Proxy
-│   └── runTest() × 48     # Execute each test sequentially
+│   └── runTest() × 64     # Execute each test sequentially
 ├── runTest()              # Single test runner with timing
 └── results[]              # Pass/fail/skip tracking
 ```

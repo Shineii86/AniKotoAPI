@@ -6,6 +6,11 @@
 > **Method:** every file read, every route/controller/extractor/helper indexed,
 > `node --check` over all JS, full integration suite run against a local server,
 > live verification of each new endpoint against its upstream API.
+>
+> **Status:** a second, deeper sweep after the 2.6.1 release found follow-up
+> P0/P1 issues (generic seasons/watch-order fallbacks, cross-tab ranking bleed,
+> 13–16 s mirror storms on client faults, HTML 404s on `/api/*`) — all fixed
+> and re-verified in `v2.6.1` (97/97 sweep requests clean, 64/64 tests).
 
 ## Repositories scanned
 

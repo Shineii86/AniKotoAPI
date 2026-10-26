@@ -34,12 +34,14 @@
  * @param {number}  [options.limit=100]   - Requests allowed per window
  * @param {number}  [options.windowMs=60000] - Window length in ms
  * @param {number}  [options.sweepMs=300000] - Idle-entry sweep interval in ms
+ * @param {Function} [options.skip]       - (req) => boolean — paths exempt from
+ *                                           counting (health probes, spec docs)
  * @returns {Function} Express middleware
  *
  * @example
  *   app.use(createRateLimiter({ limit: 100, windowMs: 60000 }));
  */
-const createRateLimiter = ({ limit, windowMs, sweepMs } = {}) => {
+const createRateLimiter = ({ limit, windowMs, sweepMs, skip } = {}) => {
   const RATE_LIMIT = limit || parseInt(process.env.RATE_LIMIT, 10) || 100;
   const RATE_WINDOW = windowMs || parseInt(process.env.RATE_WINDOW, 10) || 60000;
   const RATE_CLEANUP_INTERVAL = sweepMs || 300000;
@@ -60,6 +62,10 @@ const createRateLimiter = ({ limit, windowMs, sweepMs } = {}) => {
   }, RATE_CLEANUP_INTERVAL).unref?.();
 
   return (req, res, next) => {
+    // NOTE: Exempt paths (health, spec) are never counted against the window
+    if (typeof skip === "function" && skip(req)) {
+      return next();
+    }
     const ip = req.ip || req.connection.remoteAddress;
     const now = Date.now();
     if (!requestCounts.has(ip)) {

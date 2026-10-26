@@ -47,7 +47,7 @@ const categoryRoutes = (app, jsonResponse, jsonError) => {
     try {
       await getCategory(req, res, next);
     } catch (error) {
-      jsonError(res, error.message);
+      jsonError(res, error.message, error.status || 500);
     }
   });
 
@@ -62,7 +62,7 @@ const categoryRoutes = (app, jsonResponse, jsonError) => {
     try {
       await getCategory(req, res, next);
     } catch (error) {
-      jsonError(res, error.message);
+      jsonError(res, error.message, error.status || 500);
     }
   });
 
@@ -77,7 +77,7 @@ const categoryRoutes = (app, jsonResponse, jsonError) => {
     try {
       await getCategory(req, res, next);
     } catch (error) {
-      jsonError(res, error.message);
+      jsonError(res, error.message, error.status || 500);
     }
   });
 };

@@ -78,6 +78,11 @@ const getAnilistAnime = async (req, res, next) => {
     if (/Invalid AniList ID/i.test(error.message)) {
       return res.status(400).json({ success: false, message: error.message });
     }
+    // NOTE: The helper throws "not found" instead of returning null — a
+    // missing anime is a 404, not a gateway failure
+    if (/not found/i.test(error.message)) {
+      return res.status(404).json({ success: false, message: "Anime not found on AniList" });
+    }
     res.status(502).json({ success: false, message: `AniList lookup failed: ${error.message}` });
   }
 };

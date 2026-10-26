@@ -215,7 +215,7 @@ AniKotoAPI/
 │   ├── architecture.md     # Design patterns
 │   ├── testing.md          # Test suite docs
 │   └── diagnostic-sweep.md # Cross-repo audit report
-├── test.js                 # 48 integration tests
+├── test.js                 # 64 integration tests
 ├── package.json
 └── vercel.json
 ```

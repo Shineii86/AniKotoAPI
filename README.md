@@ -375,7 +375,7 @@ AniKotoAPI/
 │   │   ├── 📄 embedProviders.extractor.js # 🆕 MAL/AniList ID resolution + embed URLs
 │   │   ├── 📄 filter.extractor.js        #       🎯 Filtered results
 │   │   ├── 📄 watchPage.extractor.js     #       ▶️ Watch page data
-│   │   ├── 📄 seasons.extractor.js       #       📅 Season info from watch page
+│   │   ├── 📄 seasons.extractor.js       #       📅 Season list via upstream AJAX
 │   │   ├── 📄 watchOrder.extractor.js    #       📋 Watch order from sidebar
 │   │   ├── 📄 episodeList.extractor.js   #       📋 Episode lists
 │   │   └── 📄 ... (17 more)
@@ -825,11 +825,12 @@ console.log(resp.data);
 
 | Parameter | Type | Mandatory | Default | Description |
 | :-------: | :--: | :-------: | :-----: | :---------: |
-| `date` | `string` | Yes ✔️ | — | Date in `YYYY-MM-DD` format |
+| `date` | `string` | No | today | Date in `YYYY-MM-DD` format — must be a real calendar date, otherwise `400` |
 
 #### Example of request
 
 ```bash
+curl "https://anikototvapi.vercel.app/api/schedule"
 curl "https://anikototvapi.vercel.app/api/schedule?date=2026-06-08"
 ```
 
@@ -1977,19 +1978,22 @@ console.log(resp.data);
 
 | Parameter | Type | Mandatory | Default | Description |
 | :-------: | :--: | :-------: | :-----: | :---------: |
-| `id` | `number` | Yes ✔️ | — | Anime numeric ID |
+| `id` | `string` | Yes ✔️ | — | Anime **slug** (`naruto-eybxz`) or numeric upstream animeId (`958`) |
 
 #### Example of request
 
 ```bash
-curl "https://anikototvapi.vercel.app/api/seasons/1642"
+curl "https://anikototvapi.vercel.app/api/seasons/naruto-eybxz"
 ```
 
 ```javascript
 import axios from "axios";
-const resp = await axios.get("https://anikototvapi.vercel.app/api/seasons/1642");
+const resp = await axios.get("https://anikototvapi.vercel.app/api/seasons/958");
 console.log(resp.data);
 ```
+
+Returns the real per-anime season list (upstream `/api/seasons/{animeId}`
+fragment); anime without a season split return `totalSeasons: 0`.
 
 ---
 
@@ -2005,7 +2009,7 @@ console.log(resp.data);
 
 | Parameter | Type | Mandatory | Default | Description |
 | :-------: | :--: | :-------: | :-----: | :---------: |
-| `id` | `number` | Yes ✔️ | — | Anime numeric ID |
+| `id` | `string` | Yes ✔️ | — | Anime **slug** (`naruto-eybxz`) or numeric upstream animeId (`958`) |
 
 #### Example of request
 
@@ -2015,9 +2019,13 @@ curl "https://anikototvapi.vercel.app/api/watch-order/1642"
 
 ```javascript
 import axios from "axios";
-const resp = await axios.get("https://anikototvapi.vercel.app/api/watch-order/1642");
+const resp = await axios.get("https://anikototvapi.vercel.app/api/watch-order/naruto-eybxz");
 console.log(resp.data);
 ```
+
+Related-anime list from the upstream `/api/watch-order/{animeId}` fragment
+(deduped, self excluded). Upstream relation labels are currently broken
+placeholders, so every entry reports `relation: "related"`.
 
 ---
 
@@ -2324,7 +2332,7 @@ All list endpoints include pagination metadata in the response:
 | `hasNext` | `boolean` | Whether there is a next page |
 | `hasPrev` | `boolean` | Whether there is a previous page |
 
-**Endpoints with pagination:** `/api/search`, `/api/most-popular`, `/api/new-release`, `/api/newly-added`, `/api/latest-updated`, `/api/az-list/:letter`, `/api/filter`, `/api/genre/:name`, `/api/type/:name`, `/api/status/:name`, `/api/upcoming`, `/api/top-rankings`, `/api/recently-updated`, `/api/completed`
+**Endpoints with pagination:** `/api/search`, `/api/most-popular`, `/api/new-release`, `/api/newly-added`, `/api/latest-updated`, `/api/az-list/:letter`, `/api/filter`, `/api/genre/:name`, `/api/type/:name`, `/api/status/:name`
 
 ### Anime Item Object
 
@@ -2453,7 +2461,7 @@ CMD ["node", "server.js"]
 
 | Version | Date | Key Changes |
 |:---|:---|:---|
-| **2.6.1** | 2026-10-24 | Stream resolver rebuilt on `getSources` + AES decrypt, proxy full-rewrite/streaming upgrade, live CDN allowlist, 48 tests |
+| **2.6.1** | 2026-10-24 | Stream resolver rebuilt on `getSources` + AES decrypt, proxy full-rewrite/streaming upgrade, live CDN allowlist, 64 tests |
 | **2.6.0** | 2026-10-24 | Full diagnostic sweep + cross-repo comparison, modularised middleware/routes/OpenAPI, cache stampede guard, `?refresh=1` + `X-Cache`, input validation, `trust proxy` rate-limit fix, AniList enrichment endpoints |
 | **2.5.1** | 2026-10-13 | Domain sync vs official hub, spotlight carousel fix, direct embed providers (`/api/stream/embeds`), info `externalIds` + latest-episode checker, full docs pass, diagnostic sweep, Dockerfile Node 22 |
 | **2.4.1** | 2026-08-27 | Security: fixed SSRF in stream proxies, dotenv load order fix, SECURITY.md |

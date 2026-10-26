@@ -292,6 +292,9 @@ const resolveStreamUrls = async (embedUrl, options = {}) => {
  * @param {object} [options] - Fetch options
  * @param {object} [options.headers] - Custom headers
  * @param {number} [options.timeout=10000] - Request timeout
+ * @param {boolean} [options.strict=false] - Throw typed errors instead of
+ *   silently returning [] (415 when the body isn't a playlist, 502 on
+ *   fetch failure) — used by the /stream/qualities endpoint
  * @returns {Promise<Array<Object>>} Array of quality objects
  *
  * @example
@@ -299,7 +302,7 @@ const resolveStreamUrls = async (embedUrl, options = {}) => {
  *   qualities.forEach(q => console.log(`${q.label}: ${q.url}`));
  */
 const parseM3u8Qualities = async (m3u8Url, options = {}) => {
-  const { headers: customHeaders = {}, timeout = 10000 } = options;
+  const { headers: customHeaders = {}, timeout = 10000, strict = false } = options;
 
   try {
     const response = await axios.get(m3u8Url, {
@@ -311,6 +314,14 @@ const parseM3u8Qualities = async (m3u8Url, options = {}) => {
     const content = typeof response.data === "string"
       ? response.data
       : String(response.data);
+
+    // NOTE: A non-playlist body (HTML error page, JSON, empty file) means
+    // the URL isn't HLS — in strict mode that's an explicit 415, not []
+    if (strict && !content.includes("#EXTM3U")) {
+      const err = new Error("URL did not return an HLS playlist");
+      err.status = 415;
+      throw err;
+    }
 
     const qualities = [];
     const lines = content.split("\n").map((l) => l.trim());
@@ -357,6 +368,15 @@ const parseM3u8Qualities = async (m3u8Url, options = {}) => {
 
     return qualities;
   } catch (error) {
+    if (strict) {
+      if (error.status) throw error;
+      // NOTE: Map transport failures — upstream 4xx pass through, anything
+      // else (timeout, DNS, 5xx) is a gateway problem the client may retry
+      const upstream = error.response?.status;
+      const err = new Error(error.message);
+      err.status = upstream && upstream < 500 ? upstream : 502;
+      throw err;
+    }
     return [];
   }
 };

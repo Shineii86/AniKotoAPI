@@ -57,7 +57,16 @@ const getStreamInfo = async (req, res, next) => {
     try {
       data = await extractStreamInfo(id, slug);
     } catch (upstreamError) {
-      return res.status(502).json({ success: false, message: `Upstream API error: ${upstreamError.message}` });
+      // NOTE: Typed upstream faults carry their own status (e.g. 400 for a
+      // garbage link id that every mirror rejects identically) — only
+      // untyped failures deserve the blanket 502 gateway wrapper
+      const status = upstreamError.status || 502;
+      return res.status(status).json({
+        success: false,
+        message: upstreamError.status
+          ? upstreamError.message
+          : `Upstream API error: ${upstreamError.message}`,
+      });
     }
     if (!data.url) {
       return res.status(404).json({ success: false, message: "Stream URL not found for this link ID", results: data });

@@ -45,7 +45,7 @@ const enrichmentRoutes = (app, { jsonError }) => {
     try {
       await getAnilistSeasonChart(req, res, next);
     } catch (error) {
-      jsonError(res, error.message);
+      jsonError(res, error.message, error.status || 500);
     }
   });
 
@@ -60,7 +60,7 @@ const enrichmentRoutes = (app, { jsonError }) => {
     try {
       await getAnilistAnime(req, res, next);
     } catch (error) {
-      jsonError(res, error.message);
+      jsonError(res, error.message, error.status || 500);
     }
   });
 };

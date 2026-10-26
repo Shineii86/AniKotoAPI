@@ -245,7 +245,18 @@ async function fetchFromMirrors(path, options = {}) {
             try { parsed = JSON.parse(data); } catch { /* not JSON */ }
           }
           if (parsed && typeof parsed === "object" && parsed.status && Number(parsed.status) >= 400) {
-            throw new Error(`Upstream error (${parsed.status}): ${parsed.result || "Bad request"}`);
+            // NOTE: Every mirror fronts the same backend, so a structured
+            // upstream 4xx — or a 5xx that literally says "Bad request" — is
+            // the caller's fault and will fail identically everywhere.
+            // Retrying it across every mirror only burns the full budget
+            // (13s+ per bad request), so mark it terminal and map the status.
+            const upstream = Number(parsed.status);
+            const upstreamText = String(parsed.result || parsed.message || "Bad request");
+            const clientFault = upstream < 500 || /bad request|invalid/i.test(upstreamText);
+            const err = new Error(`Upstream error (${upstream}): ${upstreamText}`);
+            err.status = upstream < 500 ? upstream : (clientFault ? 400 : 502);
+            err.terminal = clientFault;
+            throw err;
           }
 
           // Update working mirror
@@ -263,14 +274,26 @@ async function fetchFromMirrors(path, options = {}) {
 
         // NOTE: 404 means endpoint doesn't exist, not mirror failure — don't retry
         if (response.status === 404) {
-          throw new Error(`Endpoint not found: ${path}`);
+          const err = new Error(`Endpoint not found: ${path}`);
+          err.status = 404;
+          err.terminal = true;
+          throw err;
         }
       } catch (error) {
-        lastError = error;
-        // NOTE: Don't retry on 404 — the endpoint simply doesn't exist on this mirror
-        if (error.message?.includes("Endpoint not found")) {
+        const httpStatus = error.response?.status;
+        if (httpStatus === 404 || httpStatus === 400) {
+          // NOTE: The path itself is wrong/missing — every mirror answers the
+          // same way, so stop immediately instead of retrying 5 mirrors.
+          const err = new Error(httpStatus === 404
+            ? `Endpoint not found: ${path}`
+            : `Upstream rejected the request (400): ${path}`);
+          err.status = httpStatus;
+          err.terminal = true;
+          lastError = err;
           break;
         }
+        lastError = error;
+        if (error.terminal) break;
         if (attempt < retries) {
           // Wait before retry
           await new Promise(r => setTimeout(r, 500 * (attempt + 1)));
@@ -278,11 +301,23 @@ async function fetchFromMirrors(path, options = {}) {
       }
     }
 
-    // NOTE: Only mark mirror as failed for connection errors, not endpoint 404s
-    if (!lastError.message?.includes("Endpoint not found")) {
+    // NOTE: Terminal errors (bad slug, invalid id, missing route) repeat on
+    // every mirror — bail out of the mirror loop instead of paying for the rest
+    if (lastError?.terminal) break;
+
+    // NOTE: Only mark mirror as failed for connection errors / upstream
+    // outages — never for terminal client-fault answers
+    if (lastError) {
       failedMirrors.add(mirror);
       console.log(`[MIRROR] Marked as failed: ${mirror}`);
     }
+  }
+
+  // NOTE: Terminal answer reached — surface it with its own status code
+  if (lastError?.terminal) {
+    const err = new Error(lastError.message);
+    err.status = lastError.status || 404;
+    throw err;
   }
 
   // All direct requests failed — try proxy if configured

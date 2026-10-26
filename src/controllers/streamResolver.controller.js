@@ -110,7 +110,9 @@ const getStreamQualities = async (req, res, next) => {
       return res.json({ success: true, results: cached });
     }
 
-    const qualities = await parseM3u8Qualities(url);
+    // NOTE: strict mode — a non-playlist body is a 415, a fetch failure a 502;
+    // returning qualities:[] for a URL that isn't HLS hides the real problem
+    const qualities = await parseM3u8Qualities(url, { strict: true });
     const result = {
       url,
       totalQualities: qualities.length,

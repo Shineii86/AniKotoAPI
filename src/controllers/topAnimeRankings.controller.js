@@ -15,8 +15,9 @@
  * ======= • ======= • ======= • ======= • =======• =======
  */
 
-import { extractTopAnimeRankings } from "../extractors/topAnimeRankings.extractor.js";
+import { extractTopAnimeRankings, VALID_SORTS } from "../extractors/topAnimeRankings.extractor.js";
 import { getCache, setCache, TTL } from "../helper/cache.helper.js";
+import { jsonError } from "../helper/response.helper.js";
 
 // ══════════════════════════════════════════════════════════════
 // CONTROLLER: TOP ANIME RANKINGS
@@ -40,6 +41,13 @@ import { getCache, setCache, TTL } from "../helper/cache.helper.js";
 const getTopAnimeRankings = async (req, res, next) => {
   try {
     const { sort = "day" } = req.query;
+
+    // NOTE: Reject unknown windows instead of silently falling back to day —
+    // every sort value must map to exactly one ranking tab
+    if (!VALID_SORTS.includes(sort)) {
+      return jsonError(res, `Invalid sort: ${sort} (expected ${VALID_SORTS.join(", ")})`, 400);
+    }
+
     const cacheKey = `top_rankings_${sort}`;
     const cached = getCache(cacheKey);
     if (cached) {

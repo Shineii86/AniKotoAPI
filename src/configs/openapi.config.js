@@ -51,10 +51,10 @@ const slugParam = (name, description) => ({
 });
 
 /** Query parameter with a string schema. */
-const queryParam = (name, description, schema = { type: "string" }, example) => ({
+const queryParam = (name, description, schema = { type: "string" }, example, required = false) => ({
   name,
   in: "query",
-  required: false,
+  required,
   description,
   schema,
   ...(example !== undefined ? { example } : {}),
@@ -100,14 +100,14 @@ const PATHS = {
 
   // ── Search ──────────────────────────────────────────────
   "/search": getOp("Search anime", ["Search"], {
-    params: [queryParam("keyword", "Search keyword", { type: "string" }, "naruto"), pageParam()],
+    params: [queryParam("keyword", "Search keyword (required)", { type: "string" }, "naruto", true), pageParam()],
   }),
   "/search/suggest": getOp("Search autocomplete suggestions", ["Search"], {
-    params: [queryParam("keyword", "Search keyword", { type: "string" }, "nar")],
+    params: [queryParam("keyword", "Search keyword (required)", { type: "string" }, "nar", true)],
     noRefresh: true,
   }),
   "/suggestions": getOp("Anime suggestions", ["Search"], {
-    params: [queryParam("keyword", "Seed keyword", { type: "string" }, "naruto")],
+    params: [queryParam("keyword", "Seed keyword (required)", { type: "string" }, "naruto", true)],
   }),
 
   // ── Anime details ───────────────────────────────────────
@@ -118,13 +118,19 @@ const PATHS = {
       queryParam("slug", "Anime slug (alias: id)", { type: "string" }, "one-piece-odmau"),
     ],
   }),
-  "/seasons/{id}": getOp("Season data", ["Anime"], { params: [slugParam("id", "Anime slug")] }),
-  "/watch-order/{id}": getOp("Watch order & related anime", ["Anime"], { params: [slugParam("id", "Anime slug")] }),
+  "/seasons/{id}": getOp("Season data", ["Anime"], {
+    description: "Season list for one anime via the upstream /api/seasons/ AJAX fragment. Accepts a slug or a numeric animeId. Returns an empty `seasons` array when the anime has no season split (result: false upstream).",
+    params: [slugParam("id", "Anime slug or numeric upstream animeId (e.g. 958)")],
+  }),
+  "/watch-order/{id}": getOp("Watch order & related anime", ["Anime"], {
+    description: "Related-anime list for one anime via the upstream /api/watch-order/ AJAX fragment. Accepts a slug or a numeric animeId. NOTE: upstream relation labels are currently broken placeholders, so every item reports relation: \"related\"; entries are deduped and the anime itself is excluded.",
+    params: [slugParam("id", "Anime slug or numeric upstream animeId (e.g. 1642)")],
+  }),
 
   // ── Episodes ────────────────────────────────────────────
   "/episodes/latest": getOp("Latest episode checker", ["Episodes"], {
     description: "Returns only the newest episode — built for bot polling.",
-    params: [queryParam("slug", "Anime slug", { type: "string" }, "one-piece-odmau")],
+    params: [queryParam("slug", "Anime slug (required)", { type: "string" }, "one-piece-odmau", true)],
     noRefresh: true,
   }),
   "/episodes/{id}": getOp("Episode list", ["Episodes"], { params: [slugParam("id", "Anime slug")] }),
@@ -139,39 +145,41 @@ const PATHS = {
   // ── Watch / streaming ───────────────────────────────────
   "/watch": getOp("Watch page data", ["Streaming"], {
     params: [
-      queryParam("slug", "Anime slug", { type: "string" }, "one-piece-odmau"),
-      queryParam("ep", "Episode number", { type: "integer", minimum: 1 }, 1),
+      queryParam("slug", "Anime slug (required)", { type: "string" }, "one-piece-odmau", true),
+      queryParam("ep", "Episode number (required)", { type: "integer", minimum: 1 }, 1, true),
     ],
   }),
   "/servers": getOp("Server list", ["Streaming"], {
-    params: [queryParam("ids", "Comma-separated episode IDs", { type: "string" }, "1,2")],
+    params: [queryParam("ids", "Comma-separated episode IDs (required)", { type: "string" }, "1,2", true)],
   }),
   "/mapper-servers": getOp("Mapper servers", ["Streaming"], {
+    description: "All three parameters are required — the endpoint 400s if any is missing.",
     params: [
-      queryParam("malId", "MyAnimeList ID", { type: "string" }, "21"),
-      queryParam("slug", "Anime slug", { type: "string" }, "one-piece-odmau"),
-      queryParam("timestamp", "Mapper timestamp", { type: "string" }, "1700000000"),
+      queryParam("malId", "MyAnimeList ID (required)", { type: "string" }, "21", true),
+      queryParam("slug", "Anime slug (required)", { type: "string" }, "one-piece-odmau", true),
+      queryParam("timestamp", "Mapper timestamp (required)", { type: "string" }, "1700000000", true),
     ],
     noRefresh: true,
   }),
   "/stream": getOp("Stream URL", ["Streaming"], {
     params: [
-      queryParam("id", "Episode link ID", { type: "string" }, "12345"),
+      queryParam("id", "Episode link ID (required)", { type: "string" }, "12345", true),
       queryParam("slug", "Anime slug (for session establishment)", { type: "string" }, "one-piece-odmau"),
     ],
   }),
   "/stream/resolve": getOp("Resolve actual stream URL (m3u8/mp4)", ["Streaming"], {
-    params: [queryParam("id", "Episode link ID", { type: "string" }, "12345")],
+    params: [queryParam("id", "Episode link ID (required)", { type: "string" }, "12345", true)],
   }),
   "/stream/qualities": getOp("Available quality options for an M3U8 stream", ["Streaming"], {
-    params: [queryParam("url", "M3U8 playlist URL", { type: "string" })],
+    description: "Fetches and parses the playlist. 415 when the URL does not return an HLS playlist (#EXTM3U), 502 when the fetch itself fails.",
+    params: [queryParam("url", "M3U8 playlist URL (required)", { type: "string" }, undefined, true)],
   }),
   "/stream/embeds": getOp("Direct embed provider URLs", ["Streaming"], {
-    description: "Iframe-ready player URLs for Megavid, AniXo and MegaPlay — no source-site AJAX scraping required.",
+    description: "Iframe-ready player URLs for Megavid, AniXo and MegaPlay — no source-site AJAX scraping required. Provide at least one of ?slug=, ?mal= or ?anilist= (400 otherwise); ?lang= must be sub or dub.",
     params: [
-      queryParam("slug", "Anime slug", { type: "string" }, "one-piece-odmau"),
-      queryParam("mal", "Direct MAL ID (skips slug lookup)", { type: "string" }, "21"),
-      queryParam("anilist", "Direct AniList ID (skips slug lookup)", { type: "string" }, "21"),
+      queryParam("slug", "Anime slug (required unless ?mal= or ?anilist= is given)", { type: "string" }, "one-piece-odmau"),
+      queryParam("mal", "Direct MAL ID — resolves anilistId automatically (required unless ?slug= or ?anilist= is given)", { type: "string" }, "21"),
+      queryParam("anilist", "Direct AniList ID (required unless ?slug= or ?mal= is given)", { type: "string" }, "21"),
       queryParam("ep", "Episode number", { type: "integer", minimum: 1 }, 1),
       queryParam("lang", "Audio track", { type: "string", enum: ["sub", "dub"] }, "sub"),
       queryParam("provider", "Comma-separated provider filter", { type: "string" }, "megavid,megaplay"),
@@ -179,28 +187,28 @@ const PATHS = {
     noRefresh: true,
   }),
   "/stream/proxy": getOp("M3U8 playlist proxy (rewrites URLs)", ["Streaming"], {
-    description: "Fetches an allowlisted playlist and rewrites segment URLs back through this API.",
-    params: [queryParam("url", "M3U8 playlist URL", { type: "string" })],
+    description: "Fetches an allowlisted playlist and rewrites segment URLs back through this API. 415 when the upstream body is not an HLS playlist.",
+    params: [queryParam("url", "M3U8 playlist URL (required)", { type: "string" }, undefined, true)],
     noRefresh: true,
   }),
   "/stream/ts-proxy": getOp("TS video segment proxy", ["Streaming"], {
-    params: [queryParam("url", "TS segment URL", { type: "string" })],
+    params: [queryParam("url", "TS segment URL (required)", { type: "string" }, undefined, true)],
     noRefresh: true,
   }),
   "/download": getOp("Download links", ["Streaming"], {
     params: [
-      queryParam("slug", "Anime slug", { type: "string" }, "one-piece-odmau"),
-      queryParam("ep", "Episode number", { type: "integer", minimum: 1 }, 1),
+      queryParam("slug", "Anime slug (required)", { type: "string" }, "one-piece-odmau", true),
+      queryParam("ep", "Episode number (required)", { type: "integer", minimum: 1 }, 1, true),
     ],
   }),
 
   // ── Enrichment (AniList) ────────────────────────────────
   "/anilist": getOp("AniList metadata by MAL ID", ["Enrichment"], {
-    description: "MAL-first alias of /anilist/{id}: resolves the MAL ID to AniList (cached 60min) and returns the full media object.",
-    params: [queryParam("mal", "MyAnimeList ID", { type: "string" }, "21")],
+    description: "MAL-first alias of /anilist/{id}: resolves the MAL ID to AniList (cached 60min) and returns the full media object. 404 when AniList has no matching media.",
+    params: [queryParam("mal", "MyAnimeList ID (required)", { type: "string" }, "21", true)],
   }),
   "/anilist/{id}": getOp("AniList anime metadata", ["Enrichment"], {
-    description: "Synopsis, genres, scores, studios, characters, relations and recommendations from the public AniList GraphQL API.",
+    description: "Synopsis, genres, scores, studios, characters, relations and recommendations from the public AniList GraphQL API. Provide the path ID or ?mal= (400 otherwise); 404 when the media does not exist.",
     params: [queryParam("id", "AniList media ID (0 or omitted with ?mal=)", { type: "string" }, "21"),
       queryParam("mal", "MyAnimeList ID alternative", { type: "string" }, "21")],
   }),
@@ -216,7 +224,8 @@ const PATHS = {
 
   // ── Schedule ────────────────────────────────────────────
   "/schedule": getOp("Anime airing schedule", ["Schedule"], {
-    params: [queryParam("date", "Date in YYYY-MM-DD format", { type: "string" }, "2026-10-24")],
+    description: "Airing schedule for a calendar day. ?date= defaults to today (server local time) and must be a real YYYY-MM-DD date — anything else returns 400.",
+    params: [queryParam("date", "Date in YYYY-MM-DD format (optional, defaults to today)", { type: "string" }, "2026-10-24")],
   }),
 
   // ── Discovery ───────────────────────────────────────────
@@ -232,6 +241,7 @@ const PATHS = {
   // ── Rankings ────────────────────────────────────────────
   "/top-ten": getOp("Top 10 rankings", ["Rankings"], { noRefresh: true }),
   "/top-rankings": getOp("Top anime rankings", ["Rankings"], {
+    description: "Nine ranked entries per window. Each sort value maps to its own homepage tab — an unknown sort returns 400 instead of silently falling back.",
     params: [queryParam("sort", "Ranking window", { type: "string", enum: ["day", "week", "month"] }, "day")],
   }),
   "/most-popular": getOp("Most popular anime", ["Rankings"], { params: [pageParam()] }),

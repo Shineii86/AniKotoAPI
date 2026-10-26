@@ -20,6 +20,7 @@
 import { buildEpisodeEmbeds } from "../extractors/embedProviders.extractor.js";
 import { EMBED_PROVIDER_IDS } from "../configs/embedProviders.config.js";
 import { getCache, setCache, TTL } from "../helper/cache.helper.js";
+import { jsonError } from "../helper/response.helper.js";
 
 // ══════════════════════════════════════════════════════════════
 // CONTROLLER: EMBED PROVIDERS
@@ -52,10 +53,19 @@ const getEmbedProviders = async (req, res, next) => {
   try {
     const { slug, ep, episode, lang, provider, mal, anilist } = req.query;
 
-    // NOTE: Accept both ?ep= and ?episode= for convenience; clamp lang
-    // to the sub/dub values the embed providers understand
-    const resolvedEp = parseInt(ep || episode || "1", 10) || 1;
-    const resolvedLang = String(lang || "sub").toLowerCase() === "dub" ? "dub" : "sub";
+    // NOTE: Accept both ?ep= and ?episode=; lang must be exactly sub|dub —
+    // silently coercing a typo to "sub" only hides client bugs
+    const rawEp = ep ?? episode;
+    if (rawEp !== undefined && !/^\d+$/.test(String(rawEp))) {
+      return jsonError(res, `Invalid ep: ${rawEp} (expected a positive integer)`, 400);
+    }
+    const rawLang = lang !== undefined ? String(lang).toLowerCase() : "sub";
+    if (rawLang !== "sub" && rawLang !== "dub") {
+      return jsonError(res, `Invalid lang: ${lang} (expected sub or dub)`, 400);
+    }
+
+    const resolvedEp = parseInt(rawEp || "1", 10) || 1;
+    const resolvedLang = rawLang;
     const requested = provider
       ? String(provider).split(",").map((p) => p.trim().toLowerCase()).filter(Boolean)
       : null;
@@ -65,18 +75,21 @@ const getEmbedProviders = async (req, res, next) => {
     if (requested) {
       const unknown = requested.filter((p) => !EMBED_PROVIDER_IDS.includes(p));
       if (unknown.length) {
-        return res.status(400).json({
-          success: false,
-          message: `Unknown provider(s): ${unknown.join(", ")}. Valid: ${EMBED_PROVIDER_IDS.join(", ")}`,
-        });
+        return jsonError(res, `Unknown provider(s): ${unknown.join(", ")}. Valid: ${EMBED_PROVIDER_IDS.join(", ")}`, 400);
       }
     }
 
     if (!slug && !mal && !anilist) {
-      return res.status(400).json({
-        success: false,
-        message: "Provide 'slug', 'mal' or 'anilist' (plus optional 'ep' and 'lang')"
-      });
+      return jsonError(res, "Provide 'slug', 'mal' or 'anilist' (plus optional 'ep' and 'lang')", 400);
+    }
+
+    // NOTE: Validate the numeric IDs themselves — "abc" must not be treated
+    // as a real MAL/AniList id and silently probed upstream
+    if (mal !== undefined && !/^\d+$/.test(String(mal))) {
+      return jsonError(res, `Invalid mal: ${mal} (expected a numeric MAL ID)`, 400);
+    }
+    if (anilist !== undefined && !/^\d+$/.test(String(anilist))) {
+      return jsonError(res, `Invalid anilist: ${anilist} (expected a numeric AniList ID)`, 400);
     }
 
     // NOTE: Cache key composes every response-affecting input — episode,
